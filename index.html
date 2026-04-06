@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BS Box - Conecta Varejo</title>
-  
-  <link rel="manifest" href="manifest.json">
+
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#222222">
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -79,16 +79,17 @@ button{padding:7px;border:none;border-radius:6px;background:#222;color:white;mar
 let produtos=[]
 let pedido={}
 let numeroPedido=gerarNumeroPedido()
-document.getElementById("pedidoNumero").innerText="Pedido "+numeroPedido
 
 function gerarNumeroPedido(){
 let d=new Date()
 return d.getFullYear()+("0"+(d.getMonth()+1)).slice(-2)+("0"+d.getDate()).slice(-2)+"-"+("0"+d.getHours()).slice(-2)+("0"+d.getMinutes()).slice(-2)
 }
 
-function normalizar(t){return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")}
+document.getElementById("pedidoNumero").innerText="Pedido "+numeroPedido
 
-carregarCatalogo()
+function normalizar(t){
+return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+}
 
 function carregarCatalogo(){
 fetch("base_de_produtos.xlsx?"+Date.now())
@@ -97,28 +98,40 @@ fetch("base_de_produtos.xlsx?"+Date.now())
 const workbook=XLSX.read(data,{type:'array'})
 const sheet=workbook.Sheets[workbook.SheetNames[0]]
 const json=XLSX.utils.sheet_to_json(sheet,{header:1})
+
 produtos=[]
+
 json.slice(1).forEach(l=>{
 if(!l[0]) return
 produtos.push({
 codigo:String(l[0]),
-categoria:l[1],
-descricao:l[2],
-fornecedor:l[3],
+categoria:l[1] || "",
+descricao:l[2] || "",
+fornecedor:l[3] || "",
 valorUnit:parseFloat(l[4])||0,
 pedidoMin:parseInt(l[6])||1
 })
 })
-popularFiltros();render()
-})}
+
+popularFiltros()
+render()
+})
+.catch(err=>{
+alert("Erro ao carregar catálogo")
+console.error(err)
+})
+}
 
 function popularFiltros(){
-let categorias=[...new Set(produtos.map(p=>p.categoria))]
-let fornecedores=[...new Set(produtos.map(p=>p.fornecedor))]
+let categorias=[...new Set(produtos.map(p=>p.categoria).filter(Boolean))]
+let fornecedores=[...new Set(produtos.map(p=>p.fornecedor).filter(Boolean))]
+
 let cat=document.getElementById("filtroCategoria")
 let forn=document.getElementById("filtroFornecedor")
+
 cat.innerHTML='<option value="">Todas categorias</option>'
 forn.innerHTML='<option value="">Todos fornecedores</option>'
+
 categorias.forEach(c=>cat.innerHTML+=`<option value="${c}">${c}</option>`)
 fornecedores.forEach(f=>forn.innerHTML+=`<option value="${f}">${f}</option>`)
 }
@@ -128,6 +141,7 @@ let busca=normalizar(document.getElementById("busca").value)
 let categoria=document.getElementById("filtroCategoria").value
 let fornecedor=document.getElementById("filtroFornecedor").value
 let lista=document.getElementById("lista")
+
 lista.innerHTML=""
 
 produtos.filter(p=>{
@@ -138,6 +152,7 @@ return okBusca&&okCat&&okFor
 }).forEach(p=>{
 let div=document.createElement("div")
 div.className="card"
+
 div.innerHTML=`
 <div>
 <b>${p.descricao}</b><br>
@@ -149,8 +164,10 @@ R$ ${p.valorUnit.toFixed(2)}<br>
 <input type="number" min="1" placeholder="Qtd" id="q_${p.codigo}">
 <button onclick="addItem('${p.codigo}')">Add</button>
 </div>`
+
 lista.appendChild(div)
 })
+
 renderPedido()
 }
 
@@ -164,7 +181,14 @@ alert("Pedido mínimo: "+prod.pedidoMin)
 return
 }
 
-pedido[c]={codigo:c,produto:prod.descricao,qtd:q,valor:prod.valorUnit,fornecedor:prod.fornecedor}
+pedido[c]={
+codigo:c,
+produto:prod.descricao,
+qtd:q,
+valor:prod.valorUnit,
+fornecedor:prod.fornecedor
+}
+
 input.value=""
 render()
 }
@@ -172,6 +196,7 @@ render()
 function renderPedido(){
 let box=document.getElementById("pedido")
 box.innerHTML=""
+
 let total=0
 let fornecedores={}
 
@@ -182,10 +207,13 @@ fornecedores[p.fornecedor].push(p)
 
 for(let f in fornecedores){
 box.innerHTML+=`<b>${f}</b><br>`
+
 let sub=0
+
 fornecedores[f].forEach(p=>{
 let st=p.qtd*p.valor
 sub+=st
+
 box.innerHTML+=`
 ${p.codigo} - ${p.qtd}x 
 <input type="number" value="${p.valor}" step="0.01" style="width:70px"
@@ -194,6 +222,7 @@ onchange="alterarValor('${p.codigo}', this.value)">
 <button onclick="removerItem('${p.codigo}')">❌</button>
 <br>`
 })
+
 box.innerHTML+=`<b>Subtotal: R$ ${sub.toFixed(2)}</b><br><br>`
 total+=sub
 }
@@ -213,7 +242,6 @@ delete pedido[c]
 render()
 }
 
-/* 🔥 NOVA FUNÇÃO PDF POR FORNECEDOR */
 function gerarPDF(){
 let cliente=document.getElementById("cliente").value
 let obs=document.getElementById("observacao").value
@@ -228,8 +256,8 @@ for(let f in fornecedores){
 
 let html=`<div class='titulo'>CONECTA VAREJO</div>`
 html+=`Pedido ${numeroPedido}<br>Cliente: ${cliente}<br><br>`
-
 html+=`<b>Fornecedor: ${f}</b>`
+
 html+=`<table class='tabela'>
 <tr><th>Código</th><th>Qtd</th><th>V.Unit</th><th>V.Total</th><th>Descrição</th></tr>`
 
@@ -269,8 +297,7 @@ let imgHeight=(canvas.height*imgWidth)/canvas.width
 
 pdf.addImage(imgData,'PNG',0,0,imgWidth,imgHeight)
 
-// nome com fornecedor
-let nomeFornecedor = f.replace(/\s+/g, "_")
+let nomeFornecedor=f.replace(/\s+/g,"_")
 pdf.save(nomeFornecedor+"_pedido_"+numeroPedido+".pdf")
 
 container.style.display="none"
@@ -280,11 +307,14 @@ container.style.display="none"
 
 function gerarExcel(){
 let dados=[["Fornecedor","Codigo","Produto","Qtd","Valor","Subtotal"]]
+
 Object.values(pedido).forEach(p=>{
 dados.push([p.fornecedor,p.codigo,p.produto,p.qtd,p.valor,p.qtd*p.valor])
 })
+
 let ws=XLSX.utils.aoa_to_sheet(dados)
 let wb=XLSX.utils.book_new()
+
 XLSX.utils.book_append_sheet(wb,ws,"Pedido")
 XLSX.writeFile(wb,"pedido_"+numeroPedido+".xlsx")
 }
@@ -296,6 +326,14 @@ document.getElementById("pedidoNumero").innerText="Pedido "+numeroPedido
 document.getElementById("observacao").value=""
 render()
 }
+
+/* 🔥 SERVICE WORKER */
+if ('serviceWorker' in navigator) {
+navigator.serviceWorker.register('sw.js')
+}
+
+/* 🚀 CARREGA AO INICIAR */
+carregarCatalogo()
 </script>
 </body>
 </html>
