@@ -314,7 +314,74 @@ renderPedido()
 }
 
 /* 📄 PDF e Excel (mantidos) */
-function gerarPDF(){/* seu código mantido */}
+function gerarPDF(){
+
+let cliente = document.getElementById("cliente").value
+let obs = document.getElementById("observacao").value
+
+// 🔥 Corrige quebra de linha
+let obsFormatado = obs.replace(/\n/g, "<br>")
+
+let fornecedores = {}
+
+Object.values(pedido).forEach(p=>{
+if(!fornecedores[p.fornecedor]) fornecedores[p.fornecedor]=[]
+fornecedores[p.fornecedor].push(p)
+})
+
+for(let f in fornecedores){
+
+let html = `<div class='titulo'>CONECTA VAREJO</div>`
+html += `Pedido ${numeroPedido}<br>Cliente: ${cliente}<br><br>`
+html += `<b>Fornecedor: ${f}</b>`
+
+html += `<table class='tabela'>
+<tr><th>Código</th><th>Qtd</th><th>V.Unit</th><th>V.Total</th><th>Descrição</th></tr>`
+
+let sub = 0
+
+fornecedores[f].forEach(p=>{
+let totalItem = p.qtd * p.valor
+sub += totalItem
+
+html += `<tr>
+<td>${p.codigo}</td>
+<td>${p.qtd}</td>
+<td>${p.valor.toFixed(2)}</td>
+<td>${totalItem.toFixed(2)}</td>
+<td>${p.produto}</td>
+</tr>`
+})
+
+html += `</table>`
+html += `<b>Subtotal: ${sub.toFixed(2)}</b><br><br>`
+
+// 🔥 Observação com quebra de linha funcionando
+if(obs){
+html += `<b>Observações:</b><br>${obsFormatado}`
+}
+
+let container = document.getElementById("pdfTemplate")
+container.innerHTML = html
+container.style.display = "block"
+
+html2canvas(container).then(canvas=>{
+const imgData = canvas.toDataURL("image/png")
+const { jsPDF } = window.jspdf
+
+let pdf = new jsPDF("p","mm","a4")
+let imgWidth = 210
+let imgHeight = (canvas.height * imgWidth) / canvas.width
+
+pdf.addImage(imgData,'PNG',0,0,imgWidth,imgHeight)
+
+let nomeFornecedor = f.replace(/\s+/g,"_")
+pdf.save(nomeFornecedor+"_pedido_"+numeroPedido+".pdf")
+
+container.style.display = "none"
+})
+}
+}
 
 function gerarExcel(){
 let dados=[["Fornecedor","Codigo","Produto","Qtd","Valor","Subtotal"]]
