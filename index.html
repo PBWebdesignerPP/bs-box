@@ -115,12 +115,15 @@ let cache = localStorage.getItem("catalogo")
 if(cache){
 produtos = JSON.parse(cache)
 
-// recria mapa (IMPORTANTE)
 mapaProdutos={}
 produtos.forEach(p=>mapaProdutos[p.codigo]=p)
 
+// 🔥 LIBERA UI PRIMEIRO
+setTimeout(()=>{
 popularFiltros()
 render()
+},0)
+
 atualizarCatalogoSilencioso()
 return
 }
@@ -177,27 +180,39 @@ mapaProdutos[codigo]=obj
 
 localStorage.setItem("catalogo", JSON.stringify(produtos))
 
+// 🔥 LIBERA UI PRIMEIRO
+setTimeout(()=>{
 popularFiltros()
 render()
+},0)
 }
 
-/* 🎯 FILTROS */
+/* 🎯 FILTROS OTIMIZADO */
 function popularFiltros(){
 
-let categorias=[...new Set(produtos.map(p=>p.categoria).filter(Boolean))]
-let fornecedores=[...new Set(produtos.map(p=>p.fornecedor).filter(Boolean))]
+let catSet = new Set()
+let fornSet = new Set()
+
+for(let i=0; i<produtos.length; i++){
+let p = produtos[i]
+if(p.categoria) catSet.add(p.categoria)
+if(p.fornecedor) fornSet.add(p.fornecedor)
+}
 
 let cat=document.getElementById("filtroCategoria")
 let forn=document.getElementById("filtroFornecedor")
 
-cat.innerHTML='<option value="">Todas categorias</option>'
-forn.innerHTML='<option value="">Todos fornecedores</option>'
+let htmlCat='<option value="">Todas categorias</option>'
+let htmlForn='<option value="">Todos fornecedores</option>'
 
-categorias.forEach(c=>cat.innerHTML+=`<option value="${c}">${c}</option>`)
-fornecedores.forEach(f=>forn.innerHTML+=`<option value="${f}">${f}</option>`)
+catSet.forEach(c=> htmlCat += `<option value="${c}">${c}</option>`)
+fornSet.forEach(f=> htmlForn += `<option value="${f}">${f}</option>`)
+
+cat.innerHTML = htmlCat
+forn.innerHTML = htmlForn
 }
 
-/* ⚡ RENDER OTIMIZADO */
+/* ⚡ RENDER */
 function render(){
 
 let busca = normalizar(document.getElementById("busca").value)
