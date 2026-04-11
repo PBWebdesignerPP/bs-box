@@ -100,14 +100,14 @@ function normalizar(t){
 return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
 }
 
-/* BUSCA */
+/* 🔍 BUSCA COM DEBOUNCE */
 let timeoutBusca
 document.getElementById("busca").addEventListener("input", () => {
 clearTimeout(timeoutBusca)
 timeoutBusca = setTimeout(render, 300)
 })
 
-/* CARREGAMENTO */
+/* 🚀 CARREGAMENTO */
 function carregarCatalogo(){
 
 let cache = localStorage.getItem("catalogo")
@@ -115,32 +115,23 @@ let cache = localStorage.getItem("catalogo")
 if(cache){
 produtos = JSON.parse(cache)
 
+// recria mapa (IMPORTANTE)
 mapaProdutos={}
 produtos.forEach(p=>mapaProdutos[p.codigo]=p)
 
-setTimeout(()=>{
 popularFiltros()
 render()
-},0)
-
-// atualização atrasada
-setTimeout(()=>{
 atualizarCatalogoSilencioso()
-},3000)
-
 return
 }
 
-// 🔥 não trava a UI
-setTimeout(()=>{
 baixarEProcessarExcel()
-},100)
 }
 
 function atualizarCatalogoSilencioso(){
 fetch("base_de_produtos.xlsx")
 .then(r=>r.arrayBuffer())
-.then(data => processarExcel(data, true))
+.then(processarExcel)
 }
 
 function forcarAtualizacao(){
@@ -151,22 +142,13 @@ carregarCatalogo()
 function baixarEProcessarExcel(){
 fetch("base_de_produtos.xlsx")
 .then(r=>r.arrayBuffer())
-.then(data => processarExcel(data, false))
+.then(processarExcel)
 }
 
-/* PROCESSAMENTO NÃO BLOQUEANTE */
-function processarExcel(data, silencioso=false){
-
-setTimeout(()=>{
+/* 🧠 PROCESSAMENTO */
+function processarExcel(data){
 
 const workbook = XLSX.read(data,{type:'array'})
-continuarProcessamento(workbook, silencioso)
-
-},0)
-}
-
-function continuarProcessamento(workbook, silencioso){
-
 const sheet = workbook.Sheets[workbook.SheetNames[0]]
 const json = XLSX.utils.sheet_to_json(sheet,{header:1})
 
@@ -195,40 +177,27 @@ mapaProdutos[codigo]=obj
 
 localStorage.setItem("catalogo", JSON.stringify(produtos))
 
-if(!silencioso){
-setTimeout(()=>{
 popularFiltros()
 render()
-},0)
-}
 }
 
-/* FILTROS */
+/* 🎯 FILTROS */
 function popularFiltros(){
 
-let catSet = new Set()
-let fornSet = new Set()
-
-for(let i=0; i<produtos.length; i++){
-let p = produtos[i]
-if(p.categoria) catSet.add(p.categoria)
-if(p.fornecedor) fornSet.add(p.fornecedor)
-}
+let categorias=[...new Set(produtos.map(p=>p.categoria).filter(Boolean))]
+let fornecedores=[...new Set(produtos.map(p=>p.fornecedor).filter(Boolean))]
 
 let cat=document.getElementById("filtroCategoria")
 let forn=document.getElementById("filtroFornecedor")
 
-let htmlCat='<option value="">Todas categorias</option>'
-let htmlForn='<option value="">Todos fornecedores</option>'
+cat.innerHTML='<option value="">Todas categorias</option>'
+forn.innerHTML='<option value="">Todos fornecedores</option>'
 
-catSet.forEach(c=> htmlCat += `<option value="${c}">${c}</option>`)
-fornSet.forEach(f=> htmlForn += `<option value="${f}">${f}</option>`)
-
-cat.innerHTML = htmlCat
-forn.innerHTML = htmlForn
+categorias.forEach(c=>cat.innerHTML+=`<option value="${c}">${c}</option>`)
+fornecedores.forEach(f=>forn.innerHTML+=`<option value="${f}">${f}</option>`)
 }
 
-/* RENDER */
+/* ⚡ RENDER OTIMIZADO */
 function render(){
 
 let busca = normalizar(document.getElementById("busca").value)
@@ -275,7 +244,7 @@ lista.appendChild(fragment)
 renderPedido()
 }
 
-/* PEDIDO */
+/* 🛒 PEDIDO */
 function addItem(c){
 
 let input=document.getElementById("q_"+c)
@@ -352,7 +321,7 @@ delete pedido[c]
 renderPedido()
 }
 
-/* PDF (inalterado) */
+/* 📄 PDF (INALTERADO) */
 function gerarPDF(){
 
 let cliente = document.getElementById("cliente").value
@@ -441,7 +410,7 @@ document.getElementById("observacao").value=""
 renderPedido()
 }
 
-/* START */
+/* 🚀 START */
 carregarCatalogo()
 </script>
 
