@@ -100,7 +100,7 @@ function normalizar(t){
 return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
 }
 
-/* 🔍 BUSCA COM DEBOUNCE */
+/* 🔍 BUSCA */
 let timeoutBusca
 document.getElementById("busca").addEventListener("input", () => {
 clearTimeout(timeoutBusca)
@@ -118,13 +118,17 @@ produtos = JSON.parse(cache)
 mapaProdutos={}
 produtos.forEach(p=>mapaProdutos[p.codigo]=p)
 
-// 🔥 LIBERA UI PRIMEIRO
+// libera UI
 setTimeout(()=>{
 popularFiltros()
 render()
 },0)
 
+// 🔥 atualização sem travar
+setTimeout(()=>{
 atualizarCatalogoSilencioso()
+},3000)
+
 return
 }
 
@@ -134,7 +138,7 @@ baixarEProcessarExcel()
 function atualizarCatalogoSilencioso(){
 fetch("base_de_produtos.xlsx")
 .then(r=>r.arrayBuffer())
-.then(processarExcel)
+.then(data => processarExcel(data, true))
 }
 
 function forcarAtualizacao(){
@@ -145,11 +149,11 @@ carregarCatalogo()
 function baixarEProcessarExcel(){
 fetch("base_de_produtos.xlsx")
 .then(r=>r.arrayBuffer())
-.then(processarExcel)
+.then(data => processarExcel(data, false))
 }
 
 /* 🧠 PROCESSAMENTO */
-function processarExcel(data){
+function processarExcel(data, silencioso=false){
 
 const workbook = XLSX.read(data,{type:'array'})
 const sheet = workbook.Sheets[workbook.SheetNames[0]]
@@ -180,14 +184,15 @@ mapaProdutos[codigo]=obj
 
 localStorage.setItem("catalogo", JSON.stringify(produtos))
 
-// 🔥 LIBERA UI PRIMEIRO
+if(!silencioso){
 setTimeout(()=>{
 popularFiltros()
 render()
 },0)
 }
+}
 
-/* 🎯 FILTROS OTIMIZADO */
+/* 🎯 FILTROS */
 function popularFiltros(){
 
 let catSet = new Set()
