@@ -100,14 +100,14 @@ function normalizar(t){
 return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
 }
 
-/* 🔍 BUSCA */
+/* BUSCA */
 let timeoutBusca
 document.getElementById("busca").addEventListener("input", () => {
 clearTimeout(timeoutBusca)
 timeoutBusca = setTimeout(render, 300)
 })
 
-/* 🚀 CARREGAMENTO */
+/* CARREGAMENTO */
 function carregarCatalogo(){
 
 let cache = localStorage.getItem("catalogo")
@@ -118,13 +118,12 @@ produtos = JSON.parse(cache)
 mapaProdutos={}
 produtos.forEach(p=>mapaProdutos[p.codigo]=p)
 
-// libera UI
 setTimeout(()=>{
 popularFiltros()
 render()
 },0)
 
-// 🔥 atualização sem travar
+// atualização atrasada
 setTimeout(()=>{
 atualizarCatalogoSilencioso()
 },3000)
@@ -132,7 +131,10 @@ atualizarCatalogoSilencioso()
 return
 }
 
+// 🔥 não trava a UI
+setTimeout(()=>{
 baixarEProcessarExcel()
+},100)
 }
 
 function atualizarCatalogoSilencioso(){
@@ -152,10 +154,19 @@ fetch("base_de_produtos.xlsx")
 .then(data => processarExcel(data, false))
 }
 
-/* 🧠 PROCESSAMENTO */
+/* PROCESSAMENTO NÃO BLOQUEANTE */
 function processarExcel(data, silencioso=false){
 
+setTimeout(()=>{
+
 const workbook = XLSX.read(data,{type:'array'})
+continuarProcessamento(workbook, silencioso)
+
+},0)
+}
+
+function continuarProcessamento(workbook, silencioso){
+
 const sheet = workbook.Sheets[workbook.SheetNames[0]]
 const json = XLSX.utils.sheet_to_json(sheet,{header:1})
 
@@ -192,7 +203,7 @@ render()
 }
 }
 
-/* 🎯 FILTROS */
+/* FILTROS */
 function popularFiltros(){
 
 let catSet = new Set()
@@ -217,7 +228,7 @@ cat.innerHTML = htmlCat
 forn.innerHTML = htmlForn
 }
 
-/* ⚡ RENDER */
+/* RENDER */
 function render(){
 
 let busca = normalizar(document.getElementById("busca").value)
@@ -264,7 +275,7 @@ lista.appendChild(fragment)
 renderPedido()
 }
 
-/* 🛒 PEDIDO */
+/* PEDIDO */
 function addItem(c){
 
 let input=document.getElementById("q_"+c)
@@ -341,7 +352,7 @@ delete pedido[c]
 renderPedido()
 }
 
-/* 📄 PDF (INALTERADO) */
+/* PDF (inalterado) */
 function gerarPDF(){
 
 let cliente = document.getElementById("cliente").value
@@ -430,7 +441,7 @@ document.getElementById("observacao").value=""
 renderPedido()
 }
 
-/* 🚀 START */
+/* START */
 carregarCatalogo()
 </script>
 
