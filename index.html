@@ -412,7 +412,9 @@ renderPedido()
 
 /* 🚀 START */
 carregarCatalogo()
-</script>
 
-</body>
-</html>
+// 🔥 REGISTRO DO SERVICE WORKER
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+}
+</script>
