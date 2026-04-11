@@ -84,6 +84,7 @@ button{padding:7px;border:none;border-radius:6px;background:#222;color:white;mar
 
 <script>
 let produtos=[]
+let mapaProdutos={}
 let pedido={}
 let numeroPedido=gerarNumeroPedido()
 let primeiraCarga=true
@@ -99,53 +100,52 @@ function normalizar(t){
 return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
 }
 
-/* 🔥 BUSCA COM DEBOUNCE */
+/* 🔍 BUSCA COM DEBOUNCE */
 let timeoutBusca
 document.getElementById("busca").addEventListener("input", () => {
 clearTimeout(timeoutBusca)
 timeoutBusca = setTimeout(render, 300)
 })
 
-/* 🔥 CARREGAMENTO INTELIGENTE */
+/* 🚀 CARREGAMENTO */
 function carregarCatalogo(){
 
 let cache = localStorage.getItem("catalogo")
 
 if(cache){
 produtos = JSON.parse(cache)
+
+// recria mapa (IMPORTANTE)
+mapaProdutos={}
+produtos.forEach(p=>mapaProdutos[p.codigo]=p)
+
 popularFiltros()
 render()
-
-// atualiza em background
 atualizarCatalogoSilencioso()
 return
 }
 
-// primeira vez (mais lenta)
 baixarEProcessarExcel()
 }
 
-/* 🔄 Atualização silenciosa */
 function atualizarCatalogoSilencioso(){
 fetch("base_de_produtos.xlsx")
 .then(r=>r.arrayBuffer())
 .then(processarExcel)
 }
 
-/* 🔄 Forçar atualização manual */
 function forcarAtualizacao(){
 localStorage.removeItem("catalogo")
 carregarCatalogo()
 }
 
-/* 🔽 Baixar Excel */
 function baixarEProcessarExcel(){
 fetch("base_de_produtos.xlsx")
 .then(r=>r.arrayBuffer())
 .then(processarExcel)
 }
 
-/* 🧠 Processamento otimizado */
+/* 🧠 PROCESSAMENTO */
 function processarExcel(data){
 
 const workbook = XLSX.read(data,{type:'array'})
@@ -153,6 +153,7 @@ const sheet = workbook.Sheets[workbook.SheetNames[0]]
 const json = XLSX.utils.sheet_to_json(sheet,{header:1})
 
 produtos=[]
+mapaProdutos={}
 
 json.slice(1).forEach(l=>{
 if(!l[0]) return
@@ -160,7 +161,7 @@ if(!l[0]) return
 let descricao = l[2] || ""
 let codigo = String(l[0])
 
-produtos.push({
+let obj={
 codigo: codigo,
 categoria: l[1] || "",
 descricao: descricao,
@@ -168,7 +169,10 @@ descricaoBusca: normalizar(descricao + codigo),
 fornecedor: l[3] || "",
 valorUnit: parseFloat(l[4])||0,
 pedidoMin: parseInt(l[6])||1
-})
+}
+
+produtos.push(obj)
+mapaProdutos[codigo]=obj
 })
 
 localStorage.setItem("catalogo", JSON.stringify(produtos))
@@ -193,7 +197,7 @@ categorias.forEach(c=>cat.innerHTML+=`<option value="${c}">${c}</option>`)
 fornecedores.forEach(f=>forn.innerHTML+=`<option value="${f}">${f}</option>`)
 }
 
-/* 🚀 RENDER OTIMIZADO */
+/* ⚡ RENDER OTIMIZADO */
 function render(){
 
 let busca = normalizar(document.getElementById("busca").value)
@@ -204,17 +208,17 @@ let lista = document.getElementById("lista")
 lista.innerHTML=""
 
 let filtrados = produtos.filter(p=>{
-let okBusca = p.descricaoBusca.includes(busca)
-let okCat = !categoria || p.categoria==categoria
-let okFor = !fornecedor || p.fornecedor==fornecedor
-return okBusca && okCat && okFor
+return (!busca || p.descricaoBusca.includes(busca)) &&
+(!categoria || p.categoria==categoria) &&
+(!fornecedor || p.fornecedor==fornecedor)
 })
 
-// 🔥 Limite na primeira carga
 if(primeiraCarga){
 filtrados = filtrados.slice(0,100)
 primeiraCarga=false
 }
+
+let fragment=document.createDocumentFragment()
 
 filtrados.forEach(p=>{
 let div=document.createElement("div")
@@ -232,8 +236,10 @@ R$ ${p.valorUnit.toFixed(2)}<br>
 <button onclick="addItem('${p.codigo}')">Add</button>
 </div>`
 
-lista.appendChild(div)
+fragment.appendChild(div)
 })
+
+lista.appendChild(fragment)
 
 renderPedido()
 }
@@ -243,7 +249,7 @@ function addItem(c){
 
 let input=document.getElementById("q_"+c)
 let q=parseInt(input.value)
-let prod=produtos.find(p=>p.codigo==c)
+let prod=mapaProdutos[c]
 
 if(!q || q < prod.pedidoMin){
 alert("Pedido mínimo: "+prod.pedidoMin)
@@ -265,8 +271,8 @@ renderPedido()
 function renderPedido(){
 
 let box=document.getElementById("pedido")
-box.innerHTML=""
 
+let html=""
 let total=0
 let fornecedores={}
 
@@ -277,7 +283,7 @@ fornecedores[p.fornecedor].push(p)
 
 for(let f in fornecedores){
 
-box.innerHTML+=`<b>${f}</b><br>`
+html+=`<b>${f}</b><br>`
 
 let sub=0
 
@@ -285,7 +291,7 @@ fornecedores[f].forEach(p=>{
 let st=p.qtd*p.valor
 sub+=st
 
-box.innerHTML+=`
+html+=`
 ${p.codigo} - ${p.qtd}x 
 <input type="number" value="${p.valor}" step="0.01" style="width:70px"
 onchange="alterarValor('${p.codigo}', this.value)">
@@ -294,9 +300,11 @@ onchange="alterarValor('${p.codigo}', this.value)">
 <br>`
 })
 
-box.innerHTML+=`<b>Subtotal: R$ ${sub.toFixed(2)}</b><br><br>`
+html+=`<b>Subtotal: R$ ${sub.toFixed(2)}</b><br><br>`
 total+=sub
 }
+
+box.innerHTML=html
 
 document.getElementById("totalPedido").innerText="Total R$ "+total.toFixed(2)
 }
@@ -313,13 +321,11 @@ delete pedido[c]
 renderPedido()
 }
 
-/* 📄 PDF e Excel (mantidos) */
+/* 📄 PDF (INALTERADO) */
 function gerarPDF(){
 
 let cliente = document.getElementById("cliente").value
 let obs = document.getElementById("observacao").value
-
-// 🔥 Corrige quebra de linha
 let obsFormatado = obs.replace(/\n/g, "<br>")
 
 let fornecedores = {}
@@ -356,7 +362,6 @@ html += `<tr>
 html += `</table>`
 html += `<b>Subtotal: ${sub.toFixed(2)}</b><br><br>`
 
-// 🔥 Observação com quebra de linha funcionando
 if(obs){
 html += `<b>Observações:</b><br>${obsFormatado}`
 }
