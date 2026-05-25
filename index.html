@@ -1,298 +1,779 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+
 <meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>BS Box - Conecta Varejo</title>
 
+<link rel="manifest" href="./manifest.json">
+
+<meta name="theme-color" content="#222222">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="apple-touch-icon" href="./logo_conecta.png">
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
-body{font-family:Arial;margin:0;background:#f2f2f2;}
-header{background:white;padding:10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #ddd;}
-header img{height:45px;}
-.container{display:flex;height:calc(100vh - 70px);}
-.catalogo{flex:2;overflow:auto;padding:10px;}
-.pedido{flex:1;background:white;border-left:1px solid #ddd;padding:10px;display:flex;flex-direction:column;}
-.pedidoItens{flex:1;overflow:auto;font-size:14px;margin-bottom:10px;}
-textarea{width:100%;min-height:60px;}
-.card{background:white;border-radius:8px;padding:10px;margin:6px 0;display:flex;justify-content:space-between;gap:10px;}
-.qty{display:flex;flex-direction:column;gap:5px;}
-.qty input{width:60px;text-align:center;}
-button{padding:7px;border:none;border-radius:6px;background:#222;color:white;margin:3px;cursor:pointer;flex:1;}
-.botoes{display:flex;gap:5px;}
-.total{font-weight:bold;font-size:17px;}
 
-@media(max-width:900px){
-.container{flex-direction:column;}
-.catalogo{height:55vh;}
-.pedido{height:45vh;border-top:1px solid #ddd;}
+body{
+font-family:Arial;
+margin:0;
+background:#f2f2f2;
 }
 
-#pdfTemplate{width:800px;padding:20px;background:white;color:black;font-size:12px;}
-.titulo{font-weight:bold;font-size:16px;margin-bottom:10px;}
-.tabela{width:100%;border-collapse:collapse;margin-bottom:10px;}
-.tabela th,.tabela td{border:1px solid #000;padding:4px;text-align:left;}
+header{
+background:white;
+padding:10px;
+display:flex;
+align-items:center;
+gap:10px;
+border-bottom:1px solid #ddd;
+}
+
+header img{
+height:45px;
+}
+
+.container{
+display:flex;
+height:calc(100vh - 70px);
+}
+
+.catalogo{
+flex:2;
+overflow:auto;
+padding:10px;
+}
+
+.pedido{
+flex:1;
+background:white;
+border-left:1px solid #ddd;
+padding:10px;
+display:flex;
+flex-direction:column;
+}
+
+.pedidoItens{
+flex:1;
+overflow:auto;
+font-size:14px;
+margin-bottom:10px;
+}
+
+textarea,
+input,
+select{
+width:100%;
+padding:8px;
+margin-top:5px;
+box-sizing:border-box;
+}
+
+.card{
+background:white;
+border-radius:8px;
+padding:10px;
+margin:6px 0;
+display:flex;
+justify-content:space-between;
+gap:10px;
+}
+
+.qty{
+display:flex;
+flex-direction:column;
+gap:5px;
+}
+
+.qty input{
+width:70px;
+text-align:center;
+}
+
+button{
+padding:8px;
+border:none;
+border-radius:6px;
+background:#222;
+color:white;
+cursor:pointer;
+}
+
+.botoes{
+display:flex;
+gap:5px;
+}
+
+.total{
+font-weight:bold;
+font-size:18px;
+margin-top:10px;
+}
+
+@media(max-width:900px){
+
+.container{
+flex-direction:column;
+}
+
+.catalogo{
+height:55vh;
+}
+
+.pedido{
+height:45vh;
+border-top:1px solid #ddd;
+}
+
+}
+
 </style>
+
 </head>
 
 <body>
+
 <header>
-<img src="logo_conecta.png">
-<div><b>Conecta Varejo</b><br>Sistema de Pedidos</div>
+
+<img src="./logo_conecta.png">
+
+<div>
+<b>Conecta Varejo</b><br>
+Sistema de Pedidos
+</div>
+
 </header>
 
 <div class="container">
+
 <div class="catalogo">
+
 <h2>Catálogo</h2>
-<button onclick="carregarCatalogo()">Atualizar catálogo</button>
-<input id="cliente" placeholder="Cliente">
+
+<button onclick="carregarCatalogo()">
+Atualizar catálogo
+</button>
+
 <br><br>
-<input id="busca" placeholder="Buscar produto ou código" oninput="render()">
+
+<input
+id="cliente"
+placeholder="Cliente">
+
+<br>
+
+<input
+id="busca"
+placeholder="Buscar produto ou código">
+
 <br><br>
-<select id="filtroCategoria" onchange="render()"></select>
-<select id="filtroFornecedor" onchange="render()"></select>
+
+<select id="filtroCategoria"></select>
+
+<br><br>
+
+<select id="filtroFornecedor"></select>
+
 <div id="lista"></div>
+
 </div>
 
 <div class="pedido">
+
 <h3 id="pedidoNumero"></h3>
+
 <div class="pedidoItens" id="pedido"></div>
+
 <div class="total" id="totalPedido"></div>
-<textarea id="observacao" placeholder="Observações"></textarea>
+
+<textarea
+id="observacao"
+placeholder="Observações">
+</textarea>
+
 <div class="botoes">
-<button onclick="novoPedido()">Novo</button>
-<button onclick="gerarPDF()">PDF</button>
-<button onclick="gerarExcel()">Excel</button>
-</div>
-</div>
+
+<button onclick="novoPedido()">
+Novo
+</button>
+
+<button onclick="gerarPDF()">
+PDF
+</button>
+
+<button onclick="gerarExcel()">
+Excel
+</button>
+
 </div>
 
-<div id="pdfTemplate" style="display:none"></div>
+</div>
+
+</div>
 
 <script>
-let produtos=[]
-let pedido={}
-let numeroPedido=gerarNumeroPedido()
-document.getElementById("pedidoNumero").innerText="Pedido "+numeroPedido
+
+let produtos = []
+
+let pedido = {}
+
+let numeroPedido = gerarNumeroPedido()
+
+const lista =
+document.getElementById("lista")
+
+const pedidoBox =
+document.getElementById("pedido")
+
+document.getElementById("pedidoNumero")
+.innerText =
+"Pedido " + numeroPedido
 
 function gerarNumeroPedido(){
-let d=new Date()
-return d.getFullYear()+("0"+(d.getMonth()+1)).slice(-2)+("0"+d.getDate()).slice(-2)+"-"+("0"+d.getHours()).slice(-2)+("0"+d.getMinutes()).slice(-2)
+
+let d = new Date()
+
+return d.getFullYear()
++
+("0"+(d.getMonth()+1)).slice(-2)
++
+("0"+d.getDate()).slice(-2)
++
+"-"
++
+("0"+d.getHours()).slice(-2)
++
+("0"+d.getMinutes()).slice(-2)
+
 }
 
-function normalizar(t){return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")}
+function normalizar(t){
 
-carregarCatalogo()
+return (t || "")
 
-function carregarCatalogo(){
-fetch("base_de_produtos.xlsx?"+Date.now())
-.then(r=>r.arrayBuffer())
-.then(data=>{
-const workbook=XLSX.read(data,{type:'array'})
-const sheet=workbook.Sheets[workbook.SheetNames[0]]
-const json=XLSX.utils.sheet_to_json(sheet,{header:1})
-produtos=[]
-json.slice(1).forEach(l=>{
-if(!l[0]) return
-produtos.push({
+.toLowerCase()
+
+.normalize("NFD")
+
+.replace(/[\u0300-\u036f]/g,"")
+
+}
+
+async function carregarCatalogo(){
+
+lista.innerHTML =
+"Carregando catálogo..."
+
+try{
+
+const response =
+await fetch("./base_de_produtos.xlsx")
+
+const data =
+await response.arrayBuffer()
+
+const workbook =
+XLSX.read(data,{type:'array'})
+
+const sheet =
+workbook.Sheets[
+workbook.SheetNames[0]
+]
+
+const json =
+XLSX.utils.sheet_to_json(
+sheet,
+{header:1}
+)
+
+produtos = json.slice(1)
+
+.filter(l=>l[0])
+
+.map(l=>({
+
 codigo:String(l[0]),
-categoria:l[1],
-descricao:l[2],
-fornecedor:l[3],
-valorUnit:parseFloat(l[4])||0,
-pedidoMin:parseInt(l[6])||1
-})
-})
-popularFiltros();render()
-})}
+
+categoria:l[1] || "",
+
+descricao:l[2] || "",
+
+fornecedor:l[3] || "",
+
+valorUnit:parseFloat(l[4]) || 0,
+
+pedidoMin:parseInt(l[6]) || 1,
+
+busca:
+normalizar(
+String(l[0]) + " " + (l[2] || "")
+)
+
+}))
+
+popularFiltros()
+
+renderCatalogo()
+
+}catch(e){
+
+console.error(e)
+
+lista.innerHTML =
+"Erro ao carregar catálogo"
+
+}
+
+}
 
 function popularFiltros(){
-let categorias=[...new Set(produtos.map(p=>p.categoria))]
-let fornecedores=[...new Set(produtos.map(p=>p.fornecedor))]
-let cat=document.getElementById("filtroCategoria")
-let forn=document.getElementById("filtroFornecedor")
-cat.innerHTML='<option value="">Todas categorias</option>'
-forn.innerHTML='<option value="">Todos fornecedores</option>'
-categorias.forEach(c=>cat.innerHTML+=`<option value="${c}">${c}</option>`)
-fornecedores.forEach(f=>forn.innerHTML+=`<option value="${f}">${f}</option>`)
-}
 
-function render(){
-let busca=normalizar(document.getElementById("busca").value)
-let categoria=document.getElementById("filtroCategoria").value
-let fornecedor=document.getElementById("filtroFornecedor").value
-let lista=document.getElementById("lista")
-lista.innerHTML=""
+const categorias =
+[...new Set(
+produtos.map(p=>p.categoria)
+)]
 
-produtos.filter(p=>{
-let okBusca=normalizar(p.descricao+p.codigo).includes(busca)
-let okCat=!categoria||p.categoria==categoria
-let okFor=!fornecedor||p.fornecedor==fornecedor
-return okBusca&&okCat&&okFor
-}).forEach(p=>{
-let div=document.createElement("div")
-div.className="card"
-div.innerHTML=`
-<div>
-<b>${p.descricao}</b><br>
-Cod: ${p.codigo}<br>
-R$ ${p.valorUnit.toFixed(2)}<br>
-<small>Min: ${p.pedidoMin}</small>
-</div>
-<div class="qty">
-<input type="number" min="1" placeholder="Qtd" id="q_${p.codigo}">
-<button onclick="addItem('${p.codigo}')">Add</button>
-</div>`
-lista.appendChild(div)
+const fornecedores =
+[...new Set(
+produtos.map(p=>p.fornecedor)
+)]
+
+const cat =
+document.getElementById(
+"filtroCategoria"
+)
+
+const forn =
+document.getElementById(
+"filtroFornecedor"
+)
+
+cat.innerHTML =
+'<option value="">Categorias</option>'
+
+forn.innerHTML =
+'<option value="">Fornecedores</option>'
+
+categorias.forEach(c=>{
+
+cat.innerHTML +=
+`<option value="${c}">
+${c}
+</option>`
+
 })
-renderPedido()
+
+fornecedores.forEach(f=>{
+
+forn.innerHTML +=
+`<option value="${f}">
+${f}
+</option>`
+
+})
+
 }
 
-function addItem(c){
-let input=document.getElementById("q_"+c)
-let q=parseInt(input.value)
-let prod=produtos.find(p=>p.codigo==c)
+function renderCatalogo(){
 
-if(!q || q < prod.pedidoMin){
-alert("Pedido mínimo: "+prod.pedidoMin)
+const busca =
+normalizar(
+document.getElementById("busca").value
+)
+
+const categoria =
+document.getElementById(
+"filtroCategoria"
+).value
+
+const fornecedor =
+document.getElementById(
+"filtroFornecedor"
+).value
+
+lista.innerHTML = ""
+
+const fragment =
+document.createDocumentFragment()
+
+let filtrados =
+produtos.filter(p=>{
+
+const okBusca =
+p.busca.includes(busca)
+
+const okCat =
+!categoria ||
+p.categoria === categoria
+
+const okFor =
+!fornecedor ||
+p.fornecedor === fornecedor
+
+return okBusca &&
+okCat &&
+okFor
+
+})
+
+filtrados =
+filtrados.slice(0,100)
+
+filtrados.forEach(p=>{
+
+const div =
+document.createElement("div")
+
+div.className = "card"
+
+div.innerHTML = `
+
+<div>
+
+<b>${p.descricao}</b><br>
+
+Cod: ${p.codigo}<br>
+
+R$ ${p.valorUnit.toFixed(2)}<br>
+
+<small>
+Min: ${p.pedidoMin}
+</small>
+
+</div>
+
+<div class="qty">
+
+<input
+type="number"
+min="1"
+value="${p.pedidoMin}"
+id="q_${p.codigo}">
+
+<button data-cod="${p.codigo}">
+Add
+</button>
+
+</div>
+`
+
+fragment.appendChild(div)
+
+})
+
+lista.appendChild(fragment)
+
+}
+
+lista.addEventListener("click", e=>{
+
+if(e.target.tagName !== "BUTTON")
 return
+
+const codigo =
+e.target.dataset.cod
+
+if(!codigo) return
+
+addItem(codigo)
+
+})
+
+function addItem(codigo){
+
+const input =
+document.getElementById(
+"q_"+codigo
+)
+
+const qtd =
+parseInt(input.value)
+
+const prod =
+produtos.find(
+p=>p.codigo === codigo
+)
+
+if(qtd < prod.pedidoMin){
+
+alert(
+"Pedido mínimo: "
++ prod.pedidoMin
+)
+
+return
+
 }
 
-pedido[c]={codigo:c,produto:prod.descricao,qtd:q,valor:prod.valorUnit,fornecedor:prod.fornecedor}
-input.value=""
-render()
+pedido[codigo] = {
+
+codigo:prod.codigo,
+
+produto:prod.descricao,
+
+qtd,
+
+valor:prod.valorUnit,
+
+fornecedor:prod.fornecedor
+
+}
+
+renderPedido()
+
 }
 
 function renderPedido(){
-let box=document.getElementById("pedido")
-box.innerHTML=""
-let total=0
-let fornecedores={}
 
-Object.values(pedido).forEach(p=>{
-if(!fornecedores[p.fornecedor]) fornecedores[p.fornecedor]=[]
-fornecedores[p.fornecedor].push(p)
+pedidoBox.innerHTML = ""
+
+let total = 0
+
+const fragment =
+document.createDocumentFragment()
+
+Object.values(pedido)
+.forEach(p=>{
+
+const subtotal =
+p.qtd * p.valor
+
+total += subtotal
+
+const div =
+document.createElement("div")
+
+div.innerHTML = `
+
+<b>${p.produto}</b><br>
+
+${p.codigo}
+-
+${p.qtd}x
+-
+R$ ${subtotal.toFixed(2)}
+
+<button
+onclick="removerItem('${p.codigo}')">
+
+❌
+
+</button>
+
+<hr>
+`
+
+fragment.appendChild(div)
+
 })
 
-for(let f in fornecedores){
-box.innerHTML+=`<b>${f}</b><br>`
-let sub=0
-fornecedores[f].forEach(p=>{
-let st=p.qtd*p.valor
-sub+=st
-box.innerHTML+=`
-${p.codigo} - ${p.qtd}x 
-<input type="number" value="${p.valor}" step="0.01" style="width:70px"
-onchange="alterarValor('${p.codigo}', this.value)">
-- R$ ${st.toFixed(2)}
-<button onclick="removerItem('${p.codigo}')">❌</button>
-<br>`
-})
-box.innerHTML+=`<b>Subtotal: R$ ${sub.toFixed(2)}</b><br><br>`
-total+=sub
+pedidoBox.appendChild(fragment)
+
+document.getElementById(
+"totalPedido"
+).innerText =
+"Total R$ "
++ total.toFixed(2)
+
 }
 
-document.getElementById("totalPedido").innerText="Total R$ "+total.toFixed(2)
-}
+function removerItem(codigo){
 
-function alterarValor(c, v){
-v=parseFloat(v)
-if(!v || v<=0) return
-pedido[c].valor=v
+delete pedido[codigo]
+
 renderPedido()
+
 }
 
-function removerItem(c){
-delete pedido[c]
-render()
-}
-
-/* 🔥 NOVA FUNÇÃO PDF POR FORNECEDOR */
 function gerarPDF(){
-let cliente=document.getElementById("cliente").value
-let obs=document.getElementById("observacao").value
 
-let fornecedores={}
-Object.values(pedido).forEach(p=>{
-if(!fornecedores[p.fornecedor]) fornecedores[p.fornecedor]=[]
-fornecedores[p.fornecedor].push(p)
-})
-
-for(let f in fornecedores){
-
-let html=`<div class='titulo'>CONECTA VAREJO</div>`
-html+=`Pedido ${numeroPedido}<br>Cliente: ${cliente}<br><br>`
-
-html+=`<b>Fornecedor: ${f}</b>`
-html+=`<table class='tabela'>
-<tr><th>Código</th><th>Qtd</th><th>V.Unit</th><th>V.Total</th><th>Descrição</th></tr>`
-
-let sub=0
-
-fornecedores[f].forEach(p=>{
-let totalItem=p.qtd*p.valor
-sub+=totalItem
-
-html+=`<tr>
-<td>${p.codigo}</td>
-<td>${p.qtd}</td>
-<td>${p.valor.toFixed(2)}</td>
-<td>${totalItem.toFixed(2)}</td>
-<td>${p.produto}</td>
-</tr>`
-})
-
-html+=`</table>`
-html+=`<b>Subtotal: ${sub.toFixed(2)}</b><br><br>`
-
-if(obs){
-html+=`<b>Observações:</b><br>${obs}`
-}
-
-let container=document.getElementById("pdfTemplate")
-container.innerHTML=html
-container.style.display="block"
-
-html2canvas(container).then(canvas=>{
-const imgData=canvas.toDataURL("image/png")
 const { jsPDF } = window.jspdf
 
-let pdf=new jsPDF("p","mm","a4")
-let imgWidth=210
-let imgHeight=(canvas.height*imgWidth)/canvas.width
+const pdf = new jsPDF()
 
-pdf.addImage(imgData,'PNG',0,0,imgWidth,imgHeight)
+let y = 10
 
-// nome com fornecedor
-let nomeFornecedor = f.replace(/\s+/g, "_")
-pdf.save(nomeFornecedor+"_pedido_"+numeroPedido+".pdf")
+pdf.text(
+"Pedido " + numeroPedido,
+10,
+y
+)
 
-container.style.display="none"
+y += 10
+
+Object.values(pedido)
+.forEach(p=>{
+
+pdf.text(
+
+`${p.codigo} - ${p.produto} - ${p.qtd}x`,
+
+10,
+
+y
+
+)
+
+y += 8
+
 })
-}
+
+pdf.save(
+"pedido_"+numeroPedido+".pdf"
+)
+
 }
 
 function gerarExcel(){
-let dados=[["Fornecedor","Codigo","Produto","Qtd","Valor","Subtotal"]]
-Object.values(pedido).forEach(p=>{
-dados.push([p.fornecedor,p.codigo,p.produto,p.qtd,p.valor,p.qtd*p.valor])
+
+let dados = [[
+"Fornecedor",
+"Codigo",
+"Produto",
+"Qtd",
+"Valor",
+"Subtotal"
+]]
+
+Object.values(pedido)
+.forEach(p=>{
+
+dados.push([
+
+p.fornecedor,
+
+p.codigo,
+
+p.produto,
+
+p.qtd,
+
+p.valor,
+
+p.qtd*p.valor
+
+])
+
 })
-let ws=XLSX.utils.aoa_to_sheet(dados)
-let wb=XLSX.utils.book_new()
-XLSX.utils.book_append_sheet(wb,ws,"Pedido")
-XLSX.writeFile(wb,"pedido_"+numeroPedido+".xlsx")
+
+let ws =
+XLSX.utils.aoa_to_sheet(dados)
+
+let wb =
+XLSX.utils.book_new()
+
+XLSX.utils.book_append_sheet(
+wb,
+ws,
+"Pedido"
+)
+
+XLSX.writeFile(
+wb,
+"pedido_"+numeroPedido+".xlsx"
+)
+
 }
 
 function novoPedido(){
-pedido={}
-numeroPedido=gerarNumeroPedido()
-document.getElementById("pedidoNumero").innerText="Pedido "+numeroPedido
-document.getElementById("observacao").value=""
-render()
+
+pedido = {}
+
+numeroPedido =
+gerarNumeroPedido()
+
+document.getElementById(
+"pedidoNumero"
+).innerText =
+"Pedido " + numeroPedido
+
+document.getElementById(
+"observacao"
+).value = ""
+
+renderPedido()
+
 }
+
+/* busca otimizada */
+
+let buscaTimer
+
+document.getElementById("busca")
+.addEventListener("input", ()=>{
+
+clearTimeout(buscaTimer)
+
+buscaTimer = setTimeout(()=>{
+
+renderCatalogo()
+
+},300)
+
+})
+
+document.getElementById(
+"filtroCategoria"
+).addEventListener(
+"change",
+renderCatalogo
+)
+
+document.getElementById(
+"filtroFornecedor"
+).addEventListener(
+"change",
+renderCatalogo
+)
+
+/* service worker */
+
+if("serviceWorker" in navigator){
+
+window.addEventListener(
+"load",
+()=>{
+
+navigator.serviceWorker
+
+.register("./sw.js")
+
+.then(reg=>{
+
+console.log(
+"SW registrado",
+reg
+)
+
+})
+
+.catch(err=>{
+
+console.log(
+"Erro SW",
+err
+)
+
+})
+
+})
+}
+
+carregarCatalogo()
+
 </script>
+
 </body>
 </html>
