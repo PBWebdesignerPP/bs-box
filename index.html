@@ -599,43 +599,279 @@ renderPedido()
 
 function gerarPDF(){
 
+const cliente =
+document.getElementById("cliente").value || "-"
+
+const observacao =
+document.getElementById("observacao").value || ""
+
+const dataAtual =
+new Date().toLocaleDateString("pt-BR")
+
+const fornecedores = {}
+
+Object.values(pedido).forEach(p=>{
+
+if(!fornecedores[p.fornecedor]){
+
+fornecedores[p.fornecedor] = []
+
+}
+
+fornecedores[p.fornecedor].push(p)
+
+})
+
+for(const fornecedor in fornecedores){
+
 const { jsPDF } = window.jspdf
 
-const pdf = new jsPDF()
+const pdf = new jsPDF("p","mm","a4")
 
-let y = 10
+let y = 15
+
+/* LOGO */
+
+try{
+
+pdf.addImage(
+"./logo_conecta.png",
+"PNG",
+10,
+10,
+25,
+25
+)
+
+}catch(e){
+
+console.log("Logo não carregada")
+
+}
+
+/* CABEÇALHO */
+
+pdf.setFontSize(18)
 
 pdf.text(
-"Pedido " + numeroPedido,
+"Conecta Varejo",
+40,
+18
+)
+
+pdf.setFontSize(11)
+
+pdf.text(
+"18 99617 0377",
+40,
+25
+)
+
+y = 45
+
+/* CAMPO 1 */
+
+pdf.setFontSize(12)
+
+pdf.text(
+`Data: ${dataAtual}`,
+10,
+y
+)
+
+pdf.text(
+`Pedido: ${numeroPedido}`,
+80,
+y
+)
+
+y += 8
+
+pdf.text(
+`Cliente: ${cliente}`,
+10,
+y
+)
+
+y += 12
+
+/* FORNECEDOR */
+
+pdf.setFontSize(14)
+
+pdf.text(
+`Fornecedor: ${fornecedor}`,
 10,
 y
 )
 
 y += 10
 
-Object.values(pedido)
-.forEach(p=>{
+/* CABEÇALHO TABELA */
+
+pdf.setFontSize(10)
+
+pdf.setFont(
+"helvetica",
+"bold"
+)
+
+pdf.text("Código",10,y)
+
+pdf.text("Qtd",35,y)
+
+pdf.text("V.Unit",50,y)
+
+pdf.text("V.Total",80,y)
+
+pdf.text("Descrição",115,y)
+
+y += 2
+
+pdf.line(10,y,200,y)
+
+y += 6
+
+pdf.setFont(
+"helvetica",
+"normal"
+)
+
+let totalPedido = 0
+
+/* PRODUTOS */
+
+for(const p of fornecedores[fornecedor]){
+
+const totalItem =
+p.qtd * p.valor
+
+totalPedido += totalItem
+
+/* quebra automática */
+
+const descricao =
+pdf.splitTextToSize(
+p.produto,
+80
+)
 
 pdf.text(
-
-`${p.codigo} - ${p.produto} - ${p.qtd}x`,
-
+String(p.codigo),
 10,
-
 y
+)
 
+pdf.text(
+String(p.qtd),
+35,
+y
+)
+
+pdf.text(
+"R$ " + p.valor.toFixed(2),
+50,
+y
+)
+
+pdf.text(
+"R$ " + totalItem.toFixed(2),
+80,
+y
+)
+
+pdf.text(
+descricao,
+115,
+y
+)
+
+y += Math.max(
+descricao.length * 5,
+8
+)
+
+/* quebra página */
+
+if(y > 260){
+
+pdf.addPage()
+
+y = 20
+
+}
+
+}
+
+/* TOTAL */
+
+y += 5
+
+pdf.line(10,y,200,y)
+
+y += 10
+
+pdf.setFont(
+"helvetica",
+"bold"
+)
+
+pdf.setFontSize(13)
+
+pdf.text(
+"TOTAL DO PEDIDO: R$ "
++ totalPedido.toFixed(2),
+10,
+y
+)
+
+y += 15
+
+/* OBSERVAÇÕES */
+
+pdf.setFontSize(12)
+
+pdf.text(
+"Observações:",
+10,
+y
 )
 
 y += 8
 
-})
+pdf.setFont(
+"helvetica",
+"normal"
+)
+
+/* respeita parágrafos */
+
+const linhasObs =
+pdf.splitTextToSize(
+observacao,
+180
+)
+
+pdf.text(
+linhasObs,
+10,
+y
+)
+
+/* NOME ARQUIVO */
+
+const nomeFornecedor =
+fornecedor
+.replace(/\s+/g,"_")
+.replace(/[^\w]/g,"")
 
 pdf.save(
-"pedido_"+numeroPedido+".pdf"
+`${nomeFornecedor}_pedido_${numeroPedido}.pdf`
 )
 
 }
 
+}
 function gerarExcel(){
 
 let dados = [[
