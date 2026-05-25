@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BS Box - Conecta Varejo</title>
 
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#222222">
-
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -42,27 +39,22 @@ button{padding:7px;border:none;border-radius:6px;background:#222;color:white;mar
 </head>
 
 <body>
-
 <header>
 <img src="logo_conecta.png">
 <div><b>Conecta Varejo</b><br>Sistema de Pedidos</div>
 </header>
 
 <div class="container">
-
 <div class="catalogo">
 <h2>Catálogo</h2>
-<button onclick="forcarAtualizacao()">Atualizar catálogo</button>
+<button onclick="carregarCatalogo()">Atualizar catálogo</button>
 <input id="cliente" placeholder="Cliente">
 <br><br>
-
-<input id="busca" placeholder="Buscar produto ou código">
+<input id="busca" placeholder="Buscar produto ou código" oninput="render()">
 <br><br>
-
 <select id="filtroCategoria" onchange="render()"></select>
 <select id="filtroFornecedor" onchange="render()"></select>
-
-<div id="lista">Carregando catálogo...</div>
+<div id="lista"></div>
 </div>
 
 <div class="pedido">
@@ -70,160 +62,79 @@ button{padding:7px;border:none;border-radius:6px;background:#222;color:white;mar
 <div class="pedidoItens" id="pedido"></div>
 <div class="total" id="totalPedido"></div>
 <textarea id="observacao" placeholder="Observações"></textarea>
-
 <div class="botoes">
 <button onclick="novoPedido()">Novo</button>
 <button onclick="gerarPDF()">PDF</button>
 <button onclick="gerarExcel()">Excel</button>
 </div>
 </div>
-
 </div>
 
 <div id="pdfTemplate" style="display:none"></div>
 
 <script>
 let produtos=[]
-let mapaProdutos={}
 let pedido={}
 let numeroPedido=gerarNumeroPedido()
-let primeiraCarga=true
+document.getElementById("pedidoNumero").innerText="Pedido "+numeroPedido
 
 function gerarNumeroPedido(){
 let d=new Date()
 return d.getFullYear()+("0"+(d.getMonth()+1)).slice(-2)+("0"+d.getDate()).slice(-2)+"-"+("0"+d.getHours()).slice(-2)+("0"+d.getMinutes()).slice(-2)
 }
 
-document.getElementById("pedidoNumero").innerText="Pedido "+numeroPedido
+function normalizar(t){return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")}
 
-function normalizar(t){
-return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-}
-
-/* 🔍 BUSCA COM DEBOUNCE */
-let timeoutBusca
-document.getElementById("busca").addEventListener("input", () => {
-clearTimeout(timeoutBusca)
-timeoutBusca = setTimeout(render, 300)
-})
-
-/* 🚀 CARREGAMENTO */
-function carregarCatalogo(){
-
-let cache = localStorage.getItem("catalogo")
-
-if(cache){
-produtos = JSON.parse(cache)
-
-// recria mapa (IMPORTANTE)
-mapaProdutos={}
-produtos.forEach(p=>mapaProdutos[p.codigo]=p)
-
-popularFiltros()
-render()
-atualizarCatalogoSilencioso()
-return
-}
-
-baixarEProcessarExcel()
-}
-
-function atualizarCatalogoSilencioso(){
-fetch("base_de_produtos.xlsx")
-.then(r=>r.arrayBuffer())
-.then(processarExcel)
-}
-
-function forcarAtualizacao(){
-localStorage.removeItem("catalogo")
 carregarCatalogo()
-}
 
-function baixarEProcessarExcel(){
-fetch("base_de_produtos.xlsx")
+function carregarCatalogo(){
+fetch("base_de_produtos.xlsx?"+Date.now())
 .then(r=>r.arrayBuffer())
-.then(processarExcel)
-}
-
-/* 🧠 PROCESSAMENTO */
-function processarExcel(data){
-
-const workbook = XLSX.read(data,{type:'array'})
-const sheet = workbook.Sheets[workbook.SheetNames[0]]
-const json = XLSX.utils.sheet_to_json(sheet,{header:1})
-
+.then(data=>{
+const workbook=XLSX.read(data,{type:'array'})
+const sheet=workbook.Sheets[workbook.SheetNames[0]]
+const json=XLSX.utils.sheet_to_json(sheet,{header:1})
 produtos=[]
-mapaProdutos={}
-
 json.slice(1).forEach(l=>{
 if(!l[0]) return
-
-let descricao = l[2] || ""
-let codigo = String(l[0])
-
-let obj={
-codigo: codigo,
-categoria: l[1] || "",
-descricao: descricao,
-descricaoBusca: normalizar(descricao + codigo),
-fornecedor: l[3] || "",
-valorUnit: parseFloat(l[4])||0,
-pedidoMin: parseInt(l[6])||1
-}
-
-produtos.push(obj)
-mapaProdutos[codigo]=obj
+produtos.push({
+codigo:String(l[0]),
+categoria:l[1],
+descricao:l[2],
+fornecedor:l[3],
+valorUnit:parseFloat(l[4])||0,
+pedidoMin:parseInt(l[6])||1
 })
+})
+popularFiltros();render()
+})}
 
-localStorage.setItem("catalogo", JSON.stringify(produtos))
-
-popularFiltros()
-render()
-}
-
-/* 🎯 FILTROS */
 function popularFiltros(){
-
-let categorias=[...new Set(produtos.map(p=>p.categoria).filter(Boolean))]
-let fornecedores=[...new Set(produtos.map(p=>p.fornecedor).filter(Boolean))]
-
+let categorias=[...new Set(produtos.map(p=>p.categoria))]
+let fornecedores=[...new Set(produtos.map(p=>p.fornecedor))]
 let cat=document.getElementById("filtroCategoria")
 let forn=document.getElementById("filtroFornecedor")
-
 cat.innerHTML='<option value="">Todas categorias</option>'
 forn.innerHTML='<option value="">Todos fornecedores</option>'
-
 categorias.forEach(c=>cat.innerHTML+=`<option value="${c}">${c}</option>`)
 fornecedores.forEach(f=>forn.innerHTML+=`<option value="${f}">${f}</option>`)
 }
 
-/* ⚡ RENDER OTIMIZADO */
 function render(){
-
-let busca = normalizar(document.getElementById("busca").value)
-let categoria = document.getElementById("filtroCategoria").value
-let fornecedor = document.getElementById("filtroFornecedor").value
-
-let lista = document.getElementById("lista")
+let busca=normalizar(document.getElementById("busca").value)
+let categoria=document.getElementById("filtroCategoria").value
+let fornecedor=document.getElementById("filtroFornecedor").value
+let lista=document.getElementById("lista")
 lista.innerHTML=""
 
-let filtrados = produtos.filter(p=>{
-return (!busca || p.descricaoBusca.includes(busca)) &&
-(!categoria || p.categoria==categoria) &&
-(!fornecedor || p.fornecedor==fornecedor)
-})
-
-if(primeiraCarga){
-filtrados = filtrados.slice(0,100)
-primeiraCarga=false
-}
-
-let fragment=document.createDocumentFragment()
-
-filtrados.forEach(p=>{
+produtos.filter(p=>{
+let okBusca=normalizar(p.descricao+p.codigo).includes(busca)
+let okCat=!categoria||p.categoria==categoria
+let okFor=!fornecedor||p.fornecedor==fornecedor
+return okBusca&&okCat&&okFor
+}).forEach(p=>{
 let div=document.createElement("div")
 div.className="card"
-
 div.innerHTML=`
 <div>
 <b>${p.descricao}</b><br>
@@ -235,44 +146,29 @@ R$ ${p.valorUnit.toFixed(2)}<br>
 <input type="number" min="1" placeholder="Qtd" id="q_${p.codigo}">
 <button onclick="addItem('${p.codigo}')">Add</button>
 </div>`
-
-fragment.appendChild(div)
+lista.appendChild(div)
 })
-
-lista.appendChild(fragment)
-
 renderPedido()
 }
 
-/* 🛒 PEDIDO */
 function addItem(c){
-
 let input=document.getElementById("q_"+c)
 let q=parseInt(input.value)
-let prod=mapaProdutos[c]
+let prod=produtos.find(p=>p.codigo==c)
 
 if(!q || q < prod.pedidoMin){
 alert("Pedido mínimo: "+prod.pedidoMin)
 return
 }
 
-pedido[c]={
-codigo:c,
-produto:prod.descricao,
-qtd:q,
-valor:prod.valorUnit,
-fornecedor:prod.fornecedor
-}
-
+pedido[c]={codigo:c,produto:prod.descricao,qtd:q,valor:prod.valorUnit,fornecedor:prod.fornecedor}
 input.value=""
-renderPedido()
+render()
 }
 
 function renderPedido(){
-
 let box=document.getElementById("pedido")
-
-let html=""
+box.innerHTML=""
 let total=0
 let fornecedores={}
 
@@ -282,16 +178,12 @@ fornecedores[p.fornecedor].push(p)
 })
 
 for(let f in fornecedores){
-
-html+=`<b>${f}</b><br>`
-
+box.innerHTML+=`<b>${f}</b><br>`
 let sub=0
-
 fornecedores[f].forEach(p=>{
 let st=p.qtd*p.valor
 sub+=st
-
-html+=`
+box.innerHTML+=`
 ${p.codigo} - ${p.qtd}x 
 <input type="number" value="${p.valor}" step="0.01" style="width:70px"
 onchange="alterarValor('${p.codigo}', this.value)">
@@ -299,37 +191,31 @@ onchange="alterarValor('${p.codigo}', this.value)">
 <button onclick="removerItem('${p.codigo}')">❌</button>
 <br>`
 })
-
-html+=`<b>Subtotal: R$ ${sub.toFixed(2)}</b><br><br>`
+box.innerHTML+=`<b>Subtotal: R$ ${sub.toFixed(2)}</b><br><br>`
 total+=sub
 }
-
-box.innerHTML=html
 
 document.getElementById("totalPedido").innerText="Total R$ "+total.toFixed(2)
 }
 
-function alterarValor(c,v){
+function alterarValor(c, v){
 v=parseFloat(v)
-if(!v||v<=0)return
+if(!v || v<=0) return
 pedido[c].valor=v
 renderPedido()
 }
 
 function removerItem(c){
 delete pedido[c]
-renderPedido()
+render()
 }
 
-/* 📄 PDF (INALTERADO) */
+/* 🔥 NOVA FUNÇÃO PDF POR FORNECEDOR */
 function gerarPDF(){
+let cliente=document.getElementById("cliente").value
+let obs=document.getElementById("observacao").value
 
-let cliente = document.getElementById("cliente").value
-let obs = document.getElementById("observacao").value
-let obsFormatado = obs.replace(/\n/g, "<br>")
-
-let fornecedores = {}
-
+let fornecedores={}
 Object.values(pedido).forEach(p=>{
 if(!fornecedores[p.fornecedor]) fornecedores[p.fornecedor]=[]
 fornecedores[p.fornecedor].push(p)
@@ -337,20 +223,20 @@ fornecedores[p.fornecedor].push(p)
 
 for(let f in fornecedores){
 
-let html = `<div class='titulo'>CONECTA VAREJO</div>`
-html += `Pedido ${numeroPedido}<br>Cliente: ${cliente}<br><br>`
-html += `<b>Fornecedor: ${f}</b>`
+let html=`<div class='titulo'>CONECTA VAREJO</div>`
+html+=`Pedido ${numeroPedido}<br>Cliente: ${cliente}<br><br>`
 
-html += `<table class='tabela'>
+html+=`<b>Fornecedor: ${f}</b>`
+html+=`<table class='tabela'>
 <tr><th>Código</th><th>Qtd</th><th>V.Unit</th><th>V.Total</th><th>Descrição</th></tr>`
 
-let sub = 0
+let sub=0
 
 fornecedores[f].forEach(p=>{
-let totalItem = p.qtd * p.valor
-sub += totalItem
+let totalItem=p.qtd*p.valor
+sub+=totalItem
 
-html += `<tr>
+html+=`<tr>
 <td>${p.codigo}</td>
 <td>${p.qtd}</td>
 <td>${p.valor.toFixed(2)}</td>
@@ -359,45 +245,43 @@ html += `<tr>
 </tr>`
 })
 
-html += `</table>`
-html += `<b>Subtotal: ${sub.toFixed(2)}</b><br><br>`
+html+=`</table>`
+html+=`<b>Subtotal: ${sub.toFixed(2)}</b><br><br>`
 
 if(obs){
-html += `<b>Observações:</b><br>${obsFormatado}`
+html+=`<b>Observações:</b><br>${obs}`
 }
 
-let container = document.getElementById("pdfTemplate")
-container.innerHTML = html
-container.style.display = "block"
+let container=document.getElementById("pdfTemplate")
+container.innerHTML=html
+container.style.display="block"
 
 html2canvas(container).then(canvas=>{
-const imgData = canvas.toDataURL("image/png")
+const imgData=canvas.toDataURL("image/png")
 const { jsPDF } = window.jspdf
 
-let pdf = new jsPDF("p","mm","a4")
-let imgWidth = 210
-let imgHeight = (canvas.height * imgWidth) / canvas.width
+let pdf=new jsPDF("p","mm","a4")
+let imgWidth=210
+let imgHeight=(canvas.height*imgWidth)/canvas.width
 
 pdf.addImage(imgData,'PNG',0,0,imgWidth,imgHeight)
 
-let nomeFornecedor = f.replace(/\s+/g,"_")
+// nome com fornecedor
+let nomeFornecedor = f.replace(/\s+/g, "_")
 pdf.save(nomeFornecedor+"_pedido_"+numeroPedido+".pdf")
 
-container.style.display = "none"
+container.style.display="none"
 })
 }
 }
 
 function gerarExcel(){
 let dados=[["Fornecedor","Codigo","Produto","Qtd","Valor","Subtotal"]]
-
 Object.values(pedido).forEach(p=>{
 dados.push([p.fornecedor,p.codigo,p.produto,p.qtd,p.valor,p.qtd*p.valor])
 })
-
 let ws=XLSX.utils.aoa_to_sheet(dados)
 let wb=XLSX.utils.book_new()
-
 XLSX.utils.book_append_sheet(wb,ws,"Pedido")
 XLSX.writeFile(wb,"pedido_"+numeroPedido+".xlsx")
 }
@@ -407,12 +291,8 @@ pedido={}
 numeroPedido=gerarNumeroPedido()
 document.getElementById("pedidoNumero").innerText="Pedido "+numeroPedido
 document.getElementById("observacao").value=""
-renderPedido()
+render()
 }
-
-/* 🚀 START */
-carregarCatalogo()
 </script>
-
 </body>
 </html>
