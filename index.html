@@ -63,13 +63,16 @@ border-left:1px solid #ddd;
 padding:10px;
 display:flex;
 flex-direction:column;
+overflow:hidden;
 }
 
 .pedidoItens{
 flex:1;
-overflow:auto;
+overflow-y:auto;
 font-size:14px;
 margin-bottom:10px;
+padding-bottom:120px;
+min-height:0;
 }
 
 textarea,
@@ -135,6 +138,7 @@ height:55vh;
 .pedido{
 height:45vh;
 border-top:1px solid #ddd;
+overflow:hidden;
 }
 
 }
@@ -618,7 +622,7 @@ min="0"
 step="0.01"
 value="${descontoPercent}"
 style="width:80px"
-oninput="
+onchange="
 pedido['${p.codigo}'].descontoPercent =
 parseFloat(this.value)||0;
 renderPedido();
@@ -632,7 +636,7 @@ min="0"
 step="0.01"
 value="${descontoValor}"
 style="width:80px"
-oninput="
+onchange="
 pedido['${p.codigo}'].descontoValor =
 parseFloat(this.value)||0;
 renderPedido();
