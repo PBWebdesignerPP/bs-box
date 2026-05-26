@@ -63,16 +63,13 @@ border-left:1px solid #ddd;
 padding:10px;
 display:flex;
 flex-direction:column;
-overflow:hidden;
 }
 
 .pedidoItens{
 flex:1;
-overflow-y:auto;
+overflow:auto;
 font-size:14px;
 margin-bottom:10px;
-padding-bottom:120px;
-min-height:0;
 }
 
 textarea,
@@ -103,6 +100,19 @@ gap:5px;
 .qty input{
 width:70px;
 text-align:center;
+}
+
+.valorEditavel{
+width:90px;
+padding:5px;
+margin-top:5px;
+}
+
+.itemPedido{
+background:#f8f8f8;
+padding:8px;
+border-radius:6px;
+margin-bottom:8px;
 }
 
 button{
@@ -138,7 +148,6 @@ height:55vh;
 .pedido{
 height:45vh;
 border-top:1px solid #ddd;
-overflow:hidden;
 }
 
 }
@@ -199,30 +208,6 @@ placeholder="Buscar produto ou código">
 <h3 id="pedidoNumero"></h3>
 
 <div class="pedidoItens" id="pedido"></div>
-
-<div style="margin-top:10px;">
-
-<label>Desconto total (%)</label>
-
-<input
-type="number"
-id="descontoTotalPercent"
-value="0"
-min="0"
-step="0.01"
-oninput="renderPedido()">
-
-<label>Desconto total (R$)</label>
-
-<input
-type="number"
-id="descontoTotalValor"
-value="0"
-min="0"
-step="0.01"
-oninput="renderPedido()">
-
-</div>
 
 <div class="total" id="totalPedido"></div>
 
@@ -555,13 +540,26 @@ qtd,
 
 valor:prod.valorUnit,
 
-fornecedor:prod.fornecedor,
-
-descontoPercent:0,
-
-descontoValor:0
+fornecedor:prod.fornecedor
 
 }
+
+renderPedido()
+
+}
+
+function alterarValor(codigo, novoValor){
+
+novoValor =
+parseFloat(novoValor)
+
+if(isNaN(novoValor) || novoValor < 0){
+
+return
+
+}
+
+pedido[codigo].valor = novoValor
 
 renderPedido()
 
@@ -571,7 +569,7 @@ function renderPedido(){
 
 pedidoBox.innerHTML = ""
 
-let subtotalPedido = 0
+let total = 0
 
 const fragment =
 document.createDocumentFragment()
@@ -579,77 +577,42 @@ document.createDocumentFragment()
 Object.values(pedido)
 .forEach(p=>{
 
-const subtotalOriginal =
+const subtotal =
 p.qtd * p.valor
 
-const descontoPercent =
-(p.descontoPercent || 0)
-
-const descontoValor =
-(p.descontoValor || 0)
-
-const valorDescontoPercent =
-subtotalOriginal *
-(descontoPercent / 100)
-
-const subtotal =
-subtotalOriginal
-- valorDescontoPercent
-- descontoValor
-
-subtotalPedido += subtotal
+total += subtotal
 
 const div =
 document.createElement("div")
+
+div.className = "itemPedido"
 
 div.innerHTML = `
 
 <b>${p.produto}</b><br>
 
-${p.codigo}
--
+${p.codigo}<br><br>
+
+Qtd:
 ${p.qtd}x
--
+
+<br><br>
+
+Valor Unitário:
+
+<input
+type="number"
+step="0.01"
+class="valorEditavel"
+value="${p.valor.toFixed(2)}"
+onchange="alterarValor('${p.codigo}', this.value)">
+
+<br><br>
+
+Subtotal:
+<b>
 R$ ${subtotal.toFixed(2)}
-
-<br><br>
-
-<label>Desc. %</label>
-
-<input
-type="number"
-min="0"
-step="0.01"
-value="${descontoPercent}"
-style="width:80px"
-onchange="
-pedido['${p.codigo}'].descontoPercent =
-parseFloat(this.value)||0;
-renderPedido();
-">
-
-<label>Desc. R$</label>
-
-<input
-type="number"
-min="0"
-step="0.01"
-value="${descontoValor}"
-style="width:80px"
-onchange="
-pedido['${p.codigo}'].descontoValor =
-parseFloat(this.value)||0;
-renderPedido();
-">
-
-<br><br>
-
-<small>
-
-Subtotal original:
-R$ ${subtotalOriginal.toFixed(2)}
-
-</small>
+</b>
 
 <br><br>
 
@@ -660,7 +623,6 @@ onclick="removerItem('${p.codigo}')">
 
 </button>
 
-<hr>
 `
 
 fragment.appendChild(div)
@@ -669,47 +631,11 @@ fragment.appendChild(div)
 
 pedidoBox.appendChild(fragment)
 
-const descontoTotalPercent =
-parseFloat(
-document.getElementById(
-"descontoTotalPercent"
-).value
-) || 0
-
-const descontoTotalValor =
-parseFloat(
-document.getElementById(
-"descontoTotalValor"
-).value
-) || 0
-
-const valorDescPercent =
-subtotalPedido *
-(descontoTotalPercent / 100)
-
-const totalFinal =
-subtotalPedido
-- valorDescPercent
-- descontoTotalValor
-
 document.getElementById(
 "totalPedido"
-).innerHTML = `
-
-Subtotal:
-R$ ${subtotalPedido.toFixed(2)}
-
-<br>
-
-Desconto:
-R$ ${(valorDescPercent + descontoTotalValor).toFixed(2)}
-
-<br><br>
-
-TOTAL FINAL:
-R$ ${totalFinal.toFixed(2)}
-
-`
+).innerText =
+"Total R$ "
++ total.toFixed(2)
 
 }
 
@@ -836,11 +762,9 @@ pdf.text("Qtd",35,y)
 
 pdf.text("V.Unit",50,y)
 
-pdf.text("Desc",75,y)
+pdf.text("V.Total",80,y)
 
-pdf.text("V.Total",95,y)
-
-pdf.text("Descrição",125,y)
+pdf.text("Descrição",115,y)
 
 y += 2
 
@@ -857,28 +781,15 @@ let totalPedido = 0
 
 for(const p of fornecedores[fornecedor]){
 
-const subtotalOriginal =
-p.qtd * p.valor
-
-const valorDescPercent =
-subtotalOriginal *
-((p.descontoPercent || 0) / 100)
-
-const descontoLinha =
-valorDescPercent +
-(p.descontoValor || 0)
-
 const totalItem =
-subtotalOriginal
-- valorDescPercent
-- (p.descontoValor || 0)
+p.qtd * p.valor
 
 totalPedido += totalItem
 
 const descricao =
 pdf.splitTextToSize(
 p.produto,
-70
+80
 )
 
 pdf.text(
@@ -900,20 +811,14 @@ y
 )
 
 pdf.text(
-"R$ " + descontoLinha.toFixed(2),
-75,
-y
-)
-
-pdf.text(
 "R$ " + totalItem.toFixed(2),
-95,
+80,
 y
 )
 
 pdf.text(
 descricao,
-125,
+115,
 y
 )
 
@@ -932,29 +837,6 @@ y = 20
 
 }
 
-const descontoTotalPercent =
-parseFloat(
-document.getElementById(
-"descontoTotalPercent"
-).value
-) || 0
-
-const descontoTotalValor =
-parseFloat(
-document.getElementById(
-"descontoTotalValor"
-).value
-) || 0
-
-const valorDescPercentPedido =
-totalPedido *
-(descontoTotalPercent / 100)
-
-const totalFinal =
-totalPedido
-- valorDescPercentPedido
-- descontoTotalValor
-
 y += 5
 
 pdf.line(10,y,200,y)
@@ -969,26 +851,8 @@ pdf.setFont(
 pdf.setFontSize(13)
 
 pdf.text(
-"Subtotal: R$ "
+"TOTAL DO PEDIDO: R$ "
 + totalPedido.toFixed(2),
-10,
-y
-)
-
-y += 8
-
-pdf.text(
-"Desconto Geral: R$ "
-+ (valorDescPercentPedido + descontoTotalValor).toFixed(2),
-10,
-y
-)
-
-y += 8
-
-pdf.text(
-"TOTAL FINAL: R$ "
-+ totalFinal.toFixed(2),
 10,
 y
 )
@@ -1042,26 +906,12 @@ let dados = [[
 "Codigo",
 "Produto",
 "Qtd",
-"Valor Unit",
-"Desconto %",
-"Desconto R$",
+"Valor Unitario",
 "Subtotal"
 ]]
 
 Object.values(pedido)
 .forEach(p=>{
-
-const subtotalOriginal =
-p.qtd * p.valor
-
-const valorDescPercent =
-subtotalOriginal *
-((p.descontoPercent || 0) / 100)
-
-const subtotal =
-subtotalOriginal
-- valorDescPercent
-- (p.descontoValor || 0)
 
 dados.push([
 
@@ -1075,11 +925,7 @@ p.qtd,
 
 p.valor,
 
-p.descontoPercent,
-
-p.descontoValor,
-
-subtotal
+p.qtd*p.valor
 
 ])
 
@@ -1119,14 +965,6 @@ document.getElementById(
 document.getElementById(
 "observacao"
 ).value = ""
-
-document.getElementById(
-"descontoTotalPercent"
-).value = 0
-
-document.getElementById(
-"descontoTotalValor"
-).value = 0
 
 renderPedido()
 
