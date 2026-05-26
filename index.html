@@ -196,6 +196,30 @@ placeholder="Buscar produto ou código">
 
 <div class="pedidoItens" id="pedido"></div>
 
+<div style="margin-top:10px;">
+
+<label>Desconto total (%)</label>
+
+<input
+type="number"
+id="descontoTotalPercent"
+value="0"
+min="0"
+step="0.01"
+oninput="renderPedido()">
+
+<label>Desconto total (R$)</label>
+
+<input
+type="number"
+id="descontoTotalValor"
+value="0"
+min="0"
+step="0.01"
+oninput="renderPedido()">
+
+</div>
+
 <div class="total" id="totalPedido"></div>
 
 <textarea
@@ -527,7 +551,11 @@ qtd,
 
 valor:prod.valorUnit,
 
-fornecedor:prod.fornecedor
+fornecedor:prod.fornecedor,
+
+descontoPercent:0,
+
+descontoValor:0
 
 }
 
@@ -539,7 +567,7 @@ function renderPedido(){
 
 pedidoBox.innerHTML = ""
 
-let total = 0
+let subtotalPedido = 0
 
 const fragment =
 document.createDocumentFragment()
@@ -547,10 +575,25 @@ document.createDocumentFragment()
 Object.values(pedido)
 .forEach(p=>{
 
-const subtotal =
+const subtotalOriginal =
 p.qtd * p.valor
 
-total += subtotal
+const descontoPercent =
+(p.descontoPercent || 0)
+
+const descontoValor =
+(p.descontoValor || 0)
+
+const valorDescontoPercent =
+subtotalOriginal *
+(descontoPercent / 100)
+
+const subtotal =
+subtotalOriginal
+- valorDescontoPercent
+- descontoValor
+
+subtotalPedido += subtotal
 
 const div =
 document.createElement("div")
@@ -565,10 +608,51 @@ ${p.qtd}x
 -
 R$ ${subtotal.toFixed(2)}
 
+<br><br>
+
+<label>Desc. %</label>
+
+<input
+type="number"
+min="0"
+step="0.01"
+value="${descontoPercent}"
+style="width:80px"
+oninput="
+pedido['${p.codigo}'].descontoPercent =
+parseFloat(this.value)||0;
+renderPedido();
+">
+
+<label>Desc. R$</label>
+
+<input
+type="number"
+min="0"
+step="0.01"
+value="${descontoValor}"
+style="width:80px"
+oninput="
+pedido['${p.codigo}'].descontoValor =
+parseFloat(this.value)||0;
+renderPedido();
+">
+
+<br><br>
+
+<small>
+
+Subtotal original:
+R$ ${subtotalOriginal.toFixed(2)}
+
+</small>
+
+<br><br>
+
 <button
 onclick="removerItem('${p.codigo}')">
 
-❌
+❌ Remover
 
 </button>
 
@@ -581,11 +665,47 @@ fragment.appendChild(div)
 
 pedidoBox.appendChild(fragment)
 
+const descontoTotalPercent =
+parseFloat(
+document.getElementById(
+"descontoTotalPercent"
+).value
+) || 0
+
+const descontoTotalValor =
+parseFloat(
+document.getElementById(
+"descontoTotalValor"
+).value
+) || 0
+
+const valorDescPercent =
+subtotalPedido *
+(descontoTotalPercent / 100)
+
+const totalFinal =
+subtotalPedido
+- valorDescPercent
+- descontoTotalValor
+
 document.getElementById(
 "totalPedido"
-).innerText =
-"Total R$ "
-+ total.toFixed(2)
+).innerHTML = `
+
+Subtotal:
+R$ ${subtotalPedido.toFixed(2)}
+
+<br>
+
+Desconto:
+R$ ${(valorDescPercent + descontoTotalValor).toFixed(2)}
+
+<br><br>
+
+TOTAL FINAL:
+R$ ${totalFinal.toFixed(2)}
+
+`
 
 }
 
@@ -630,8 +750,6 @@ const pdf = new jsPDF("p","mm","a4")
 
 let y = 15
 
-/* LOGO */
-
 try{
 
 pdf.addImage(
@@ -648,8 +766,6 @@ pdf.addImage(
 console.log("Logo não carregada")
 
 }
-
-/* CABEÇALHO */
 
 pdf.setFontSize(18)
 
@@ -668,8 +784,6 @@ pdf.text(
 )
 
 y = 45
-
-/* CAMPO 1 */
 
 pdf.setFontSize(12)
 
@@ -695,8 +809,6 @@ y
 
 y += 12
 
-/* FORNECEDOR */
-
 pdf.setFontSize(14)
 
 pdf.text(
@@ -706,8 +818,6 @@ y
 )
 
 y += 10
-
-/* CABEÇALHO TABELA */
 
 pdf.setFontSize(10)
 
@@ -722,9 +832,11 @@ pdf.text("Qtd",35,y)
 
 pdf.text("V.Unit",50,y)
 
-pdf.text("V.Total",80,y)
+pdf.text("Desc",75,y)
 
-pdf.text("Descrição",115,y)
+pdf.text("V.Total",95,y)
+
+pdf.text("Descrição",125,y)
 
 y += 2
 
@@ -739,21 +851,30 @@ pdf.setFont(
 
 let totalPedido = 0
 
-/* PRODUTOS */
-
 for(const p of fornecedores[fornecedor]){
 
-const totalItem =
+const subtotalOriginal =
 p.qtd * p.valor
 
-totalPedido += totalItem
+const valorDescPercent =
+subtotalOriginal *
+((p.descontoPercent || 0) / 100)
 
-/* quebra automática */
+const descontoLinha =
+valorDescPercent +
+(p.descontoValor || 0)
+
+const totalItem =
+subtotalOriginal
+- valorDescPercent
+- (p.descontoValor || 0)
+
+totalPedido += totalItem
 
 const descricao =
 pdf.splitTextToSize(
 p.produto,
-80
+70
 )
 
 pdf.text(
@@ -775,14 +896,20 @@ y
 )
 
 pdf.text(
+"R$ " + descontoLinha.toFixed(2),
+75,
+y
+)
+
+pdf.text(
 "R$ " + totalItem.toFixed(2),
-80,
+95,
 y
 )
 
 pdf.text(
 descricao,
-115,
+125,
 y
 )
 
@@ -790,8 +917,6 @@ y += Math.max(
 descricao.length * 5,
 8
 )
-
-/* quebra página */
 
 if(y > 260){
 
@@ -803,7 +928,28 @@ y = 20
 
 }
 
-/* TOTAL */
+const descontoTotalPercent =
+parseFloat(
+document.getElementById(
+"descontoTotalPercent"
+).value
+) || 0
+
+const descontoTotalValor =
+parseFloat(
+document.getElementById(
+"descontoTotalValor"
+).value
+) || 0
+
+const valorDescPercentPedido =
+totalPedido *
+(descontoTotalPercent / 100)
+
+const totalFinal =
+totalPedido
+- valorDescPercentPedido
+- descontoTotalValor
 
 y += 5
 
@@ -819,15 +965,31 @@ pdf.setFont(
 pdf.setFontSize(13)
 
 pdf.text(
-"TOTAL DO PEDIDO: R$ "
+"Subtotal: R$ "
 + totalPedido.toFixed(2),
 10,
 y
 )
 
-y += 15
+y += 8
 
-/* OBSERVAÇÕES */
+pdf.text(
+"Desconto Geral: R$ "
++ (valorDescPercentPedido + descontoTotalValor).toFixed(2),
+10,
+y
+)
+
+y += 8
+
+pdf.text(
+"TOTAL FINAL: R$ "
++ totalFinal.toFixed(2),
+10,
+y
+)
+
+y += 15
 
 pdf.setFontSize(12)
 
@@ -844,8 +1006,6 @@ pdf.setFont(
 "normal"
 )
 
-/* respeita parágrafos */
-
 const linhasObs =
 pdf.splitTextToSize(
 observacao,
@@ -857,8 +1017,6 @@ linhasObs,
 10,
 y
 )
-
-/* NOME ARQUIVO */
 
 const nomeFornecedor =
 fornecedor
@@ -872,6 +1030,7 @@ pdf.save(
 }
 
 }
+
 function gerarExcel(){
 
 let dados = [[
@@ -879,12 +1038,26 @@ let dados = [[
 "Codigo",
 "Produto",
 "Qtd",
-"Valor",
+"Valor Unit",
+"Desconto %",
+"Desconto R$",
 "Subtotal"
 ]]
 
 Object.values(pedido)
 .forEach(p=>{
+
+const subtotalOriginal =
+p.qtd * p.valor
+
+const valorDescPercent =
+subtotalOriginal *
+((p.descontoPercent || 0) / 100)
+
+const subtotal =
+subtotalOriginal
+- valorDescPercent
+- (p.descontoValor || 0)
 
 dados.push([
 
@@ -898,7 +1071,11 @@ p.qtd,
 
 p.valor,
 
-p.qtd*p.valor
+p.descontoPercent,
+
+p.descontoValor,
+
+subtotal
 
 ])
 
@@ -939,11 +1116,17 @@ document.getElementById(
 "observacao"
 ).value = ""
 
+document.getElementById(
+"descontoTotalPercent"
+).value = 0
+
+document.getElementById(
+"descontoTotalValor"
+).value = 0
+
 renderPedido()
 
 }
-
-/* busca otimizada */
 
 let buscaTimer
 
@@ -973,8 +1156,6 @@ document.getElementById(
 "change",
 renderCatalogo
 )
-
-/* service worker */
 
 if("serviceWorker" in navigator){
 
