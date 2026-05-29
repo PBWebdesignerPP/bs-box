@@ -3,25 +3,18 @@
 <head>
 
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>BS Box - Conecta Varejo</title>
 
 <link rel="manifest" href="./manifest.json">
-
 <meta name="theme-color" content="#222222">
-
 <meta name="apple-mobile-web-app-capable" content="yes">
-
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-
 <meta name="mobile-web-app-capable" content="yes">
-
 <link rel="apple-touch-icon" href="./logo_conecta.png">
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
@@ -181,15 +174,11 @@ Atualizar catálogo
 
 <br><br>
 
-<input
-id="cliente"
-placeholder="Cliente">
+<input id="cliente" placeholder="Cliente">
 
 <br>
 
-<input
-id="busca"
-placeholder="Buscar produto ou código">
+<input id="busca" placeholder="Buscar produto ou código">
 
 <br><br>
 
@@ -211,10 +200,7 @@ placeholder="Buscar produto ou código">
 
 <div class="total" id="totalPedido"></div>
 
-<textarea
-id="observacao"
-placeholder="Observações">
-</textarea>
+<textarea id="observacao" placeholder="Observações"></textarea>
 
 <div class="botoes">
 
@@ -275,11 +261,8 @@ return d.getFullYear()
 function normalizar(t){
 
 return (t || "")
-
 .toLowerCase()
-
 .normalize("NFD")
-
 .replace(/[\u0300-\u036f]/g,"")
 
 }
@@ -300,35 +283,52 @@ String(valor)
 .replace(/\s/g,"")
 .trim()
 
-if(texto.includes(",") && texto.includes(".")){
+if(texto === "-" || texto === ""){
+return 0
+}
+
+let negativo = false
+
+if(texto.startsWith("(") && texto.endsWith(")")){
+negativo = true
+texto = texto.slice(1,-1)
+}
+
+const temVirgula =
+texto.includes(",")
+
+const temPonto =
+texto.includes(".")
+
+if(temVirgula && temPonto){
 
 texto =
 texto.replace(/\./g,"")
 .replace(",",".")
 
-}else if(texto.includes(",")){
+}else if(temVirgula){
 
 texto =
 texto.replace(",",".")
 
 }
 
-return parseFloat(texto) || 0
+const convertido =
+parseFloat(texto)
 
+if(isNaN(convertido)){
+return 0
 }
-return parseFloat(
-String(valor)
-.replace("R$","")
-.replace(/\s/g,"")
-.replace(/\./g,"")
-.replace(",",".")
-) || 0
+
+return negativo ? convertido * -1 : convertido
 
 }
 
 function dinheiro(valor){
 
-return Number(valor || 0).toFixed(2)
+return Number(valor || 0)
+.toFixed(2)
+.replace(".",",")
 
 }
 
@@ -346,7 +346,7 @@ const data =
 await response.arrayBuffer()
 
 const workbook =
-XLSX.read(data,{type:'array'})
+XLSX.read(data,{type:"array"})
 
 const sheet =
 workbook.Sheets[
@@ -356,7 +356,10 @@ workbook.SheetNames[0]
 const json =
 XLSX.utils.sheet_to_json(
 sheet,
-{header:1}
+{
+header:1,
+raw:false
+}
 )
 
 produtos = json.slice(1)
@@ -405,23 +408,19 @@ function popularFiltros(){
 
 const categorias =
 [...new Set(
-produtos.map(p=>p.categoria)
+produtos.map(p=>p.categoria).filter(c=>c)
 )]
 
 const fornecedores =
 [...new Set(
-produtos.map(p=>p.fornecedor)
+produtos.map(p=>p.fornecedor).filter(f=>f)
 )]
 
 const cat =
-document.getElementById(
-"filtroCategoria"
-)
+document.getElementById("filtroCategoria")
 
 const forn =
-document.getElementById(
-"filtroFornecedor"
-)
+document.getElementById("filtroFornecedor")
 
 cat.innerHTML =
 '<option value="">Categorias</option>'
@@ -457,14 +456,10 @@ document.getElementById("busca").value
 )
 
 const categoria =
-document.getElementById(
-"filtroCategoria"
-).value
+document.getElementById("filtroCategoria").value
 
 const fornecedor =
-document.getElementById(
-"filtroFornecedor"
-).value
+document.getElementById("filtroFornecedor").value
 
 lista.innerHTML = ""
 
@@ -485,9 +480,7 @@ const okFor =
 !fornecedor ||
 p.fornecedor === fornecedor
 
-return okBusca &&
-okCat &&
-okFor
+return okBusca && okCat && okFor
 
 })
 
@@ -676,7 +669,7 @@ Valor da Caixa:
 type="text"
 inputmode="decimal"
 class="valorEditavel"
-value="${dinheiro(p.valor).replace(".",",")}"
+value="${dinheiro(p.valor)}"
 onchange="alterarValor('${p.codigo}', this.value)">
 
 <br>
@@ -694,11 +687,8 @@ R$ ${dinheiro(subtotal)}
 
 <br><br>
 
-<button
-onclick="removerItem('${p.codigo}')">
-
+<button onclick="removerItem('${p.codigo}')">
 Remover
-
 </button>
 
 `
@@ -709,11 +699,9 @@ fragment.appendChild(div)
 
 pedidoBox.appendChild(fragment)
 
-document.getElementById(
-"totalPedido"
-).innerText =
-"Total R$ "
-+ dinheiro(total)
+document.getElementById("totalPedido")
+.innerText =
+"Total R$ " + dinheiro(total)
 
 }
 
@@ -1049,14 +1037,12 @@ pedido = {}
 numeroPedido =
 gerarNumeroPedido()
 
-document.getElementById(
-"pedidoNumero"
-).innerText =
+document.getElementById("pedidoNumero")
+.innerText =
 "Pedido " + numeroPedido
 
-document.getElementById(
-"observacao"
-).value = ""
+document.getElementById("observacao")
+.value = ""
 
 renderPedido()
 
@@ -1077,16 +1063,14 @@ renderCatalogo()
 
 })
 
-document.getElementById(
-"filtroCategoria"
-).addEventListener(
+document.getElementById("filtroCategoria")
+.addEventListener(
 "change",
 renderCatalogo
 )
 
-document.getElementById(
-"filtroFornecedor"
-).addEventListener(
+document.getElementById("filtroFornecedor")
+.addEventListener(
 "change",
 renderCatalogo
 )
@@ -1098,9 +1082,7 @@ window.addEventListener(
 ()=>{
 
 navigator.serviceWorker
-
 .register("./sw.js")
-
 .then(reg=>{
 
 console.log(
@@ -1109,7 +1091,6 @@ reg
 )
 
 })
-
 .catch(err=>{
 
 console.log(
@@ -1120,6 +1101,7 @@ err
 })
 
 })
+
 }
 
 carregarCatalogo()
