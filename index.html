@@ -873,11 +873,6 @@ let totalPedido = 0
 
 for(const p of fornecedores[fornecedor]){
 
-const totalItem =
-p.qtd * p.valor
-
-totalPedido += totalItem
-
 const descricao =
 pdf.splitTextToSize(
 p.produto,
@@ -909,6 +904,11 @@ y += 6
 pdf.setFont("helvetica","normal")
 
 }
+
+const totalItem =
+p.qtd * p.valor
+
+totalPedido += totalItem
 
 pdf.text(
 String(p.codigo),
@@ -965,67 +965,6 @@ pdf.setFontSize(13)
 pdf.text(
 "TOTAL DO PEDIDO: R$ "
 + dinheiro(totalPedido),
-10,
-y
-)
-
-const nomeFornecedor =
-fornecedor
-.replace(/\s+/g,"_")
-.replace(/[^\w]/g,"")
-
-pdf.save(
-`${nomeFornecedor}_pedido_${numeroPedido}.pdf`
-)
-
-}
-
-}
-y += 5
-
-pdf.line(10,y,200,y)
-
-y += 10
-
-pdf.setFont(
-"helvetica",
-"bold"
-)
-
-pdf.setFontSize(13)
-
-pdf.text(
-"TOTAL DO PEDIDO: R$ "
-+ dinheiro(totalPedido),
-10,
-y
-)
-
-y += 15
-
-pdf.setFontSize(12)
-
-pdf.text(
-"Observações:",
-10,
-y
-)
-
-y += 8
-
-pdf.setFont(
-"helvetica",
-"normal"
-)
-
-const linhasObs =
-pdf.splitTextToSize(
-observacao,
-180
-)
-
-pdf.text(
-linhasObs,
 10,
 y
 )
