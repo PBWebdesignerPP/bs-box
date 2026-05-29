@@ -746,13 +746,18 @@ const pdf = new jsPDF("p","mm","a4")
 
 let y = 10
 
+pdf.setDrawColor(0)
+pdf.setLineWidth(0.3)
+
+pdf.rect(10,10,190,38)
+
 try{
 
 pdf.addImage(
 "./logo_conecta.png",
 "PNG",
-12,
-12,
+14,
+13,
 32,
 32
 )
@@ -763,18 +768,14 @@ console.log("Logo não carregada")
 
 }
 
-pdf.setDrawColor(0)
-pdf.setLineWidth(0.3)
-
-pdf.rect(50,10,150,34)
-
 pdf.setFont("helvetica","bold")
 pdf.setFontSize(16)
 
 pdf.text(
 "Conecta Varejo",
-55,
-18
+195,
+19,
+{align:"right"}
 )
 
 pdf.setFont("helvetica","normal")
@@ -782,23 +783,26 @@ pdf.setFontSize(10)
 
 pdf.text(
 "Rua Tomizo Kawagutti 259 Vila Industrial",
-55,
-25
+195,
+27,
+{align:"right"}
 )
 
 pdf.text(
 "Presidente Prudente/SP",
-55,
-31
+195,
+33,
+{align:"right"}
 )
 
 pdf.text(
 "Paulo Barbosa 18 99617 0377",
-55,
-37
+195,
+39,
+{align:"right"}
 )
 
-y = 50
+y = 54
 
 pdf.rect(10,y,190,24)
 
