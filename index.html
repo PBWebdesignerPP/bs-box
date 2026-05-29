@@ -284,6 +284,21 @@ return (t || "")
 
 }
 
+function numero(valor){
+
+if(valor === null || valor === undefined || valor === ""){
+return 0
+}
+
+return parseFloat(
+String(valor)
+.replace("R$","")
+.replace(/\./g,"")
+.replace(",",".")
+) || 0
+
+}
+
 async function carregarCatalogo(){
 
 lista.innerHTML =
@@ -325,9 +340,13 @@ descricao:l[2] || "",
 
 fornecedor:l[3] || "",
 
-valorUnit:parseFloat(l[4]) || 0,
+valorUnit:numero(l[4]),
 
-pedidoMin:parseInt(l[6]) || 1,
+valorCaixa:numero(l[5]),
+
+volume:parseInt(l[6]) || 1,
+
+pedidoMin:1,
 
 busca:
 normalizar(
@@ -459,10 +478,12 @@ div.innerHTML = `
 
 Cod: ${p.codigo}<br>
 
-R$ ${p.valorUnit.toFixed(2)}<br>
+Unitário: R$ ${p.valorUnit.toFixed(2)}<br>
+
+Caixa: R$ ${p.valorCaixa.toFixed(2)}<br>
 
 <small>
-Min: ${p.pedidoMin}
+Volume: ${p.volume} un/caixa
 </small>
 
 </div>
@@ -472,7 +493,7 @@ Min: ${p.pedidoMin}
 <input
 type="number"
 min="1"
-value="${p.pedidoMin}"
+value="1"
 id="q_${p.codigo}">
 
 <button data-cod="${p.codigo}">
@@ -519,11 +540,10 @@ produtos.find(
 p=>p.codigo === codigo
 )
 
-if(qtd < prod.pedidoMin){
+if(!qtd || qtd < 1){
 
 alert(
-"Pedido mínimo: "
-+ prod.pedidoMin
+"Informe a quantidade de caixas"
 )
 
 return
@@ -538,7 +558,11 @@ produto:prod.descricao,
 
 qtd,
 
-valor:prod.valorUnit,
+volume:prod.volume,
+
+valorUnit:prod.valorUnit,
+
+valor:prod.valorCaixa,
 
 fornecedor:prod.fornecedor
 
@@ -551,7 +575,7 @@ renderPedido()
 function alterarValor(codigo, novoValor){
 
 novoValor =
-parseFloat(novoValor)
+numero(novoValor)
 
 if(isNaN(novoValor) || novoValor < 0){
 
@@ -593,12 +617,17 @@ div.innerHTML = `
 
 ${p.codigo}<br><br>
 
-Qtd:
+Qtd caixas:
 ${p.qtd}x
+
+<br>
+
+Volume:
+${p.volume} un/caixa
 
 <br><br>
 
-Valor Unitário:
+Valor da Caixa:
 
 <input
 type="number"
@@ -619,7 +648,7 @@ R$ ${subtotal.toFixed(2)}
 <button
 onclick="removerItem('${p.codigo}')">
 
-❌ Remover
+Remover
 
 </button>
 
@@ -758,13 +787,13 @@ pdf.setFont(
 
 pdf.text("Código",10,y)
 
-pdf.text("Qtd",35,y)
+pdf.text("Qtd CX",35,y)
 
-pdf.text("V.Unit",50,y)
+pdf.text("V.Caixa",55,y)
 
-pdf.text("V.Total",80,y)
+pdf.text("V.Total",85,y)
 
-pdf.text("Descrição",115,y)
+pdf.text("Descrição",120,y)
 
 y += 2
 
@@ -789,7 +818,7 @@ totalPedido += totalItem
 const descricao =
 pdf.splitTextToSize(
 p.produto,
-80
+75
 )
 
 pdf.text(
@@ -806,19 +835,19 @@ y
 
 pdf.text(
 "R$ " + p.valor.toFixed(2),
-50,
+55,
 y
 )
 
 pdf.text(
 "R$ " + totalItem.toFixed(2),
-80,
+85,
 y
 )
 
 pdf.text(
 descricao,
-115,
+120,
 y
 )
 
@@ -905,8 +934,10 @@ let dados = [[
 "Fornecedor",
 "Codigo",
 "Produto",
-"Qtd",
+"Qtd Caixas",
+"Volume",
 "Valor Unitario",
+"Valor Caixa",
 "Subtotal"
 ]]
 
@@ -922,6 +953,10 @@ p.codigo,
 p.produto,
 
 p.qtd,
+
+p.volume,
+
+p.valorUnit,
 
 p.valor,
 
