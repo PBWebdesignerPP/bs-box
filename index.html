@@ -103,7 +103,7 @@ text-align:center;
 }
 
 .valorEditavel{
-width:90px;
+width:100px;
 padding:5px;
 margin-top:5px;
 }
@@ -293,9 +293,16 @@ return 0
 return parseFloat(
 String(valor)
 .replace("R$","")
+.replace(/\s/g,"")
 .replace(/\./g,"")
 .replace(",",".")
 ) || 0
+
+}
+
+function dinheiro(valor){
+
+return Number(valor || 0).toFixed(2)
 
 }
 
@@ -345,8 +352,6 @@ valorUnit:numero(l[4]),
 valorCaixa:numero(l[5]),
 
 volume:parseInt(l[6]) || 1,
-
-pedidoMin:1,
 
 busca:
 normalizar(
@@ -478,9 +483,9 @@ div.innerHTML = `
 
 Cod: ${p.codigo}<br>
 
-Unitário: R$ ${p.valorUnit.toFixed(2)}<br>
+Unitário: R$ ${dinheiro(p.valorUnit)}<br>
 
-Caixa: R$ ${p.valorCaixa.toFixed(2)}<br>
+Caixa: R$ ${dinheiro(p.valorCaixa)}<br>
 
 <small>
 Volume: ${p.volume} un/caixa
@@ -493,6 +498,7 @@ Volume: ${p.volume} un/caixa
 <input
 type="number"
 min="1"
+step="1"
 value="1"
 id="q_${p.codigo}">
 
@@ -556,7 +562,7 @@ codigo:prod.codigo,
 
 produto:prod.descricao,
 
-qtd,
+qtd:qtd,
 
 volume:prod.volume,
 
@@ -578,6 +584,12 @@ novoValor =
 numero(novoValor)
 
 if(isNaN(novoValor) || novoValor < 0){
+
+alert(
+"Informe um valor válido"
+)
+
+renderPedido()
 
 return
 
@@ -625,22 +637,33 @@ ${p.qtd}x
 Volume:
 ${p.volume} un/caixa
 
+<br>
+
+Valor unitário original:
+R$ ${dinheiro(p.valorUnit)}
+
 <br><br>
 
 Valor da Caixa:
 
 <input
-type="number"
-step="0.01"
+type="text"
+inputmode="decimal"
 class="valorEditavel"
-value="${p.valor.toFixed(2)}"
+value="${dinheiro(p.valor).replace(".",",")}"
 onchange="alterarValor('${p.codigo}', this.value)">
+
+<br>
+
+<small>
+Edite este valor para aplicar desconto. Ex: 90,53
+</small>
 
 <br><br>
 
 Subtotal:
 <b>
-R$ ${subtotal.toFixed(2)}
+R$ ${dinheiro(subtotal)}
 </b>
 
 <br><br>
@@ -664,7 +687,7 @@ document.getElementById(
 "totalPedido"
 ).innerText =
 "Total R$ "
-+ total.toFixed(2)
++ dinheiro(total)
 
 }
 
@@ -789,11 +812,13 @@ pdf.text("Código",10,y)
 
 pdf.text("Qtd CX",35,y)
 
-pdf.text("V.Caixa",55,y)
+pdf.text("Volume",55,y)
 
-pdf.text("V.Total",85,y)
+pdf.text("V.Caixa",75,y)
 
-pdf.text("Descrição",120,y)
+pdf.text("V.Total",105,y)
+
+pdf.text("Descrição",135,y)
 
 y += 2
 
@@ -818,7 +843,7 @@ totalPedido += totalItem
 const descricao =
 pdf.splitTextToSize(
 p.produto,
-75
+60
 )
 
 pdf.text(
@@ -834,20 +859,26 @@ y
 )
 
 pdf.text(
-"R$ " + p.valor.toFixed(2),
+String(p.volume),
 55,
 y
 )
 
 pdf.text(
-"R$ " + totalItem.toFixed(2),
-85,
+"R$ " + dinheiro(p.valor),
+75,
+y
+)
+
+pdf.text(
+"R$ " + dinheiro(totalItem),
+105,
 y
 )
 
 pdf.text(
 descricao,
-120,
+135,
 y
 )
 
@@ -881,7 +912,7 @@ pdf.setFontSize(13)
 
 pdf.text(
 "TOTAL DO PEDIDO: R$ "
-+ totalPedido.toFixed(2),
++ dinheiro(totalPedido),
 10,
 y
 )
@@ -935,7 +966,7 @@ let dados = [[
 "Codigo",
 "Produto",
 "Qtd Caixas",
-"Volume",
+"Volume Un/Caixa",
 "Valor Unitario",
 "Valor Caixa",
 "Subtotal"
