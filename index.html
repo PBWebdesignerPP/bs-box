@@ -719,7 +719,7 @@ const cliente =
 document.getElementById("cliente").value || "-"
 
 const observacao =
-document.getElementById("observacao").value || ""
+document.getElementById("observacao").value || "-"
 
 const dataAtual =
 new Date().toLocaleDateString("pt-BR")
@@ -744,17 +744,17 @@ const { jsPDF } = window.jspdf
 
 const pdf = new jsPDF("p","mm","a4")
 
-let y = 15
+let y = 10
 
 try{
 
 pdf.addImage(
 "./logo_conecta.png",
 "PNG",
-10,
-10,
-25,
-25
+12,
+12,
+32,
+32
 )
 
 }catch(e){
@@ -763,49 +763,86 @@ console.log("Logo não carregada")
 
 }
 
-pdf.setFontSize(18)
+pdf.setDrawColor(0)
+pdf.setLineWidth(0.3)
+
+pdf.rect(50,10,150,34)
+
+pdf.setFont("helvetica","bold")
+pdf.setFontSize(16)
 
 pdf.text(
 "Conecta Varejo",
-40,
+55,
 18
 )
 
-pdf.setFontSize(11)
+pdf.setFont("helvetica","normal")
+pdf.setFontSize(10)
 
 pdf.text(
-"18 99617 0377",
-40,
+"Rua Tomizo Kawagutti 259 Vila Industrial",
+55,
 25
 )
 
-y = 45
-
-pdf.setFontSize(12)
-
 pdf.text(
-`Data: ${dataAtual}`,
-10,
-y
+"Presidente Prudente/SP",
+55,
+31
 )
 
 pdf.text(
-`Pedido: ${numeroPedido}`,
-80,
-y
+"Paulo Barbosa 18 99617 0377",
+55,
+37
 )
 
-y += 8
+y = 50
 
-pdf.text(
-`Cliente: ${cliente}`,
-10,
-y
-)
+pdf.rect(10,y,190,24)
 
-y += 12
+pdf.setFont("helvetica","bold")
+pdf.setFontSize(11)
 
-pdf.setFontSize(14)
+pdf.text("Data:",15,y + 8)
+pdf.text("Pedido:",75,y + 8)
+pdf.text("Cliente:",15,y + 17)
+
+pdf.setFont("helvetica","normal")
+
+pdf.text(dataAtual,30,y + 8)
+pdf.text(numeroPedido,93,y + 8)
+
+const clienteLinhas =
+pdf.splitTextToSize(cliente,160)
+
+pdf.text(clienteLinhas,32,y + 17)
+
+y += 30
+
+const obsLinhas =
+pdf.splitTextToSize(observacao,180)
+
+const alturaObs =
+Math.max(24, obsLinhas.length * 5 + 14)
+
+pdf.rect(10,y,190,alturaObs)
+
+pdf.setFont("helvetica","bold")
+pdf.setFontSize(11)
+
+pdf.text("Observações:",15,y + 8)
+
+pdf.setFont("helvetica","normal")
+pdf.setFontSize(10)
+
+pdf.text(obsLinhas,15,y + 16)
+
+y += alturaObs + 10
+
+pdf.setFont("helvetica","bold")
+pdf.setFontSize(13)
 
 pdf.text(
 `Fornecedor: ${fornecedor}`,
@@ -817,21 +854,11 @@ y += 10
 
 pdf.setFontSize(10)
 
-pdf.setFont(
-"helvetica",
-"bold"
-)
-
 pdf.text("Código",10,y)
-
 pdf.text("Qtd CX",35,y)
-
 pdf.text("Volume",55,y)
-
 pdf.text("V.Caixa",75,y)
-
 pdf.text("V.Total",105,y)
-
 pdf.text("Descrição",135,y)
 
 y += 2
@@ -840,10 +867,7 @@ pdf.line(10,y,200,y)
 
 y += 6
 
-pdf.setFont(
-"helvetica",
-"normal"
-)
+pdf.setFont("helvetica","normal")
 
 let totalPedido = 0
 
@@ -859,6 +883,32 @@ pdf.splitTextToSize(
 p.produto,
 60
 )
+
+if(y > 260){
+
+pdf.addPage()
+
+y = 15
+
+pdf.setFont("helvetica","bold")
+pdf.setFontSize(10)
+
+pdf.text("Código",10,y)
+pdf.text("Qtd CX",35,y)
+pdf.text("Volume",55,y)
+pdf.text("V.Caixa",75,y)
+pdf.text("V.Total",105,y)
+pdf.text("Descrição",135,y)
+
+y += 2
+
+pdf.line(10,y,200,y)
+
+y += 6
+
+pdf.setFont("helvetica","normal")
+
+}
 
 pdf.text(
 String(p.codigo),
@@ -901,16 +951,36 @@ descricao.length * 5,
 8
 )
 
-if(y > 260){
+}
 
-pdf.addPage()
+y += 5
 
-y = 20
+pdf.line(10,y,200,y)
+
+y += 10
+
+pdf.setFont("helvetica","bold")
+pdf.setFontSize(13)
+
+pdf.text(
+"TOTAL DO PEDIDO: R$ "
++ dinheiro(totalPedido),
+10,
+y
+)
+
+const nomeFornecedor =
+fornecedor
+.replace(/\s+/g,"_")
+.replace(/[^\w]/g,"")
+
+pdf.save(
+`${nomeFornecedor}_pedido_${numeroPedido}.pdf`
+)
 
 }
 
 }
-
 y += 5
 
 pdf.line(10,y,200,y)
